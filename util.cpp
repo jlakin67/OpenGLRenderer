@@ -9,6 +9,7 @@ GLuint SCR_HEIGHT = 900;
 GLint renderMode = 0;
 GLint matrixMode = 2;
 int renderCascadeFrustum = 0;
+bool space_key_pressed = false;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
@@ -79,9 +80,15 @@ void processInput(GLFWwindow* window, Camera& camera) {
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
         camera.processKeyboard(GLFW_KEY_A, deltaTime);
     }
+    if (!space_key_pressed) space_key_pressed = (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS);
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_RELEASE && space_key_pressed) { //toggle UI
+        UI::show_ui = !UI::show_ui;
+        space_key_pressed = false;
+    }
 }
 
 void cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
+    bool uiHovered = UI::isWindowHovered();
     if (firstMove) {
         lastX = xpos;
         lastY = ypos;
@@ -96,10 +103,7 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
         deltaY = 0;
     }
     lastX = xpos; lastY = ypos;
-    if (matrixMode == 2)
-        camera.processMouse(window, deltaX, deltaY);
-    if (matrixMode == 0)
-        cameraAlt.processMouse(window, deltaX, deltaY);
+    camera.processMouse(window, deltaX, deltaY, uiHovered);
 }
 
 void drawLights(std::vector<glm::vec4>& positions, std::vector<glm::vec4>& colors, 

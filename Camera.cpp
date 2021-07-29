@@ -1,6 +1,6 @@
 #include "Camera.h"
 
-void Camera::processMouse(GLFWwindow* window, double deltaX, double deltaY)
+void Camera::processMouse(GLFWwindow* window, double deltaX, double deltaY, bool uiHovered)
 {
     //if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_RELEASE) {
     //    deltaX = 0;
@@ -10,13 +10,15 @@ void Camera::processMouse(GLFWwindow* window, double deltaX, double deltaY)
     //glfwGetCursorPos(window, &xpos, &ypos);
     //if (xpos == lastX) deltaX = 0;
     //if (ypos == lastY) deltaY = 0;
-    yaw += SENSITIVITY * ((float)deltaX);
-    pitch -= SENSITIVITY * ((float)deltaY);
-    if (pitch > 89.0f) pitch = 89.0f;
-    if (pitch < -89.0f) pitch = -89.0f;
-    front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-    front.y = sin(glm::radians(pitch));
-    front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+    if (!uiHovered) {
+        yaw += SENSITIVITY * ((float)deltaX);
+        pitch -= SENSITIVITY * ((float)deltaY);
+        if (pitch > 89.0f) pitch = 89.0f;
+        if (pitch < -89.0f) pitch = -89.0f;
+        front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+        front.y = sin(glm::radians(pitch));
+        front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+    }
 }
 
 void Camera::processKeyboard(int key, GLfloat deltaTime) {

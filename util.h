@@ -9,6 +9,7 @@
 #include "Generic.h"
 #include "Model.h"
 #include "Shader.h"
+#include "UI.h"
 
 const GLfloat cube_vertices[]{
         -1.0f, 1.0f, -1.0f,

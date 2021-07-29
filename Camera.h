@@ -19,7 +19,7 @@ public:
         front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
     }
     void processKeyboard(int key, GLfloat deltaTime);
-    void processMouse(GLFWwindow* window, double deltaX, double deltaY);
+    void processMouse(GLFWwindow* window, double deltaX, double deltaY, bool uiHovered);
     glm::vec3 pos, front;
     GLfloat pitch, yaw, sensitivity, speed;
 };

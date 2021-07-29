@@ -156,8 +156,10 @@
     <ClCompile Include="Generic.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Model.cpp" />
+    <ClCompile Include="Renderer.cpp" />
     <ClCompile Include="Shader.cpp" />
     <ClCompile Include="stb_image.cpp" />
+    <ClCompile Include="UI.cpp" />
     <ClCompile Include="util.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -173,7 +175,9 @@
     <ClInclude Include="Camera.h" />
     <ClInclude Include="Generic.h" />
     <ClInclude Include="Model.h" />
+    <ClInclude Include="Renderer.h" />
     <ClInclude Include="Shader.h" />
+    <ClInclude Include="UI.h" />
     <ClInclude Include="util.h" />
   </ItemGroup>
   <ItemGroup>

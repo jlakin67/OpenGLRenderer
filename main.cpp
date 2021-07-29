@@ -1,9 +1,7 @@
 #include <iostream>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-#include "imgui.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_opengl3.h"
+#include "UI.h"
 #include "util.h"
 #include <iostream>
 
@@ -12,6 +10,7 @@ double currentFrame = 0.0f, lastFrame = 0.0f, deltaTime = 0.0f;
 Camera camera(glm::vec3(0.0f, 1.0f, 0.0f));
 Camera cameraAlt(glm::vec3(0.0f, 1.0f, 0.0f));
 const GLfloat maxAnisotropy = 16.0f;
+GLFWwindow* window = NULL;
 
 int main(int argc, char* argv[])
 {
@@ -24,7 +23,7 @@ int main(int argc, char* argv[])
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     if (useDebug) glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, true);
-    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "OpenGL 4.3", NULL, NULL);
+    window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "OpenGL 4.3", NULL, NULL);
     if (window == NULL)
     {
         std::cout << "Failed to create GLFW window\n" << std::endl;
@@ -62,14 +61,8 @@ int main(int argc, char* argv[])
     printf("Version OpenGL:  %s\n", glGetString(GL_VERSION));
     printf("Version GLSL:    %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
 
-    //Initialize imgui
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-    ImGui::StyleColorsDark();
-    ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init(glsl_version);
-    bool show_demo_window = true;
+    //initialize imgui
+    UI::initialize();
 
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glfwSetTime(0);
@@ -80,13 +73,7 @@ int main(int argc, char* argv[])
         processInput(window, camera);
 
         //Imgui frame
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-        if (show_demo_window)
-            ImGui::ShowDemoWindow(&show_demo_window);
-        ImGui::Render();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        UI::renderUI();
         
         glfwSwapBuffers(window);
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
