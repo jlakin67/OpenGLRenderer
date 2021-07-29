@@ -1,0 +1,230 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Shaders">
+      <UniqueIdentifier>{909d4376-f4da-4a44-a6ed-4f76546edb1f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Imgui">
+      <UniqueIdentifier>{c7370b2e-adc4-4aed-90db-97aad0c9bfcc}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Shader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="util.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Camera.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Generic.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Model.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="stb_image.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Documents\Libraries\glad\src\glad.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Documents\Libraries\imgui-master\imgui-master\imgui.cpp">
+      <Filter>Imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Documents\Libraries\imgui-master\imgui-master\imgui_demo.cpp">
+      <Filter>Imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Documents\Libraries\imgui-master\imgui-master\imgui_draw.cpp">
+      <Filter>Imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Documents\Libraries\imgui-master\imgui-master\imgui_tables.cpp">
+      <Filter>Imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Documents\Libraries\imgui-master\imgui-master\imgui_widgets.cpp">
+      <Filter>Imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Documents\Libraries\imgui-master\imgui-master\backends\imgui_impl_glfw.cpp">
+      <Filter>Imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Documents\Libraries\imgui-master\imgui-master\backends\imgui_impl_opengl3.cpp">
+      <Filter>Imgui</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Axis.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Shader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="util.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Camera.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Generic.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Model.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Documents\Libraries\imgui-master\imgui-master\imconfig.h">
+      <Filter>Imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Documents\Libraries\imgui-master\imgui-master\imgui.h">
+      <Filter>Imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Documents\Libraries\imgui-master\imgui-master\imgui_internal.h">
+      <Filter>Imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Documents\Libraries\imgui-master\imgui-master\imstb_rectpack.h">
+      <Filter>Imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Documents\Libraries\imgui-master\imgui-master\imstb_textedit.h">
+      <Filter>Imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Documents\Libraries\imgui-master\imgui-master\imstb_truetype.h">
+      <Filter>Imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Documents\Libraries\imgui-master\imgui-master\backends\imgui_impl_glfw.h">
+      <Filter>Imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Documents\Libraries\imgui-master\imgui-master\backends\imgui_impl_opengl3.h">
+      <Filter>Imgui</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Shaders\Axis.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\Axis.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\CascadeFrustum.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\CascadeFrustum.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\Deferred.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\Deferred_ambient.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\Deferred_ambient_dir.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\Deferred_lv_bp.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\Deferred_lv_bp.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\Light.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\Light.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\Model_basic.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\Model_basic.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\Model_basic_texture.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\Model_blinn_phong.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\Model_blinn_phong_deferred.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\Model_blinn_phong_forward.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\Quad.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\Quad.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\Quad_deferred.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\Quad_framebuffer.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\Quad_framebuffer.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\Quad_texture.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\Quad_texture_alpha.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\Quad_texture_forward.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\Shadow.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\ShadowMap.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\ShadowMap.geom">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\ShadowMap.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\ShadowMapCascade.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\ShadowMapCascade.geom">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\ShadowMapCascade.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\Skybox.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\Skybox.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\Sun.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\Sun.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\Wireframe.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\Wireframe.vert">
+      <Filter>Shaders</Filter>
+    </None>
+  </ItemGroup>
+</Project>
