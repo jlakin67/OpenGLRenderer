@@ -11,8 +11,7 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 #include "Shader.h"
-
-extern const GLfloat maxAnisotropy;
+#include "Renderer.h"
 
 struct Vertex {
     glm::vec3 position; //layout (location = 0) in vec3 aPos;
@@ -22,7 +21,7 @@ struct Vertex {
     glm::vec3 bitangent; //layout (location = 4) in vec3 aBitangent;
 };
 
-//texture_{ambient,diffuse,specular}{0,1,2,...}
+//texture_{ambient,diffuse,specular, normal}{0,1,2,...}
 struct Texture {
     GLuint id;
     std::string path;
@@ -46,8 +45,6 @@ public:
     void loadModel(std::string path, bool hasSingleMesh = false);
     void draw(Shader& shader, glm::vec4 color = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), bool shadowMap = false);
     void setUpInstances(std::vector<glm::vec4>& positions);
-    void setUpInstances(std::vector<glm::vec4>& positions, std::vector<glm::vec4>& params, 
-        std::vector<glm::vec4>& colors);
     void drawInstances(Shader& shader, GLuint numInstances, glm::vec4 color = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), 
         bool shadowMap = false);
     std::string directory;
@@ -55,7 +52,6 @@ public:
     bool hasTexture;
     glm::mat4 model;
     GLuint instanceBuf;
-    GLuint instanceBufModel;
 private:
     void loadTexture(aiTextureType type, Mesh& mesh, const aiScene* scene, unsigned int mMaterialIndex);
     void setUpMesh(aiMesh* ai_mesh, Mesh& mesh);

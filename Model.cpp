@@ -1,6 +1,6 @@
 #include "Model.h"
 
-Model::Model() : model(1.0f), directory(""), hasTexture{ true }, instanceBuf{ 0 }, instanceBufModel{ 0 } {}
+Model::Model() : model(1.0f), directory(""), hasTexture{ true }, instanceBuf{ 0 }{}
 
 void Model::loadModel(std::string path, bool hasSingleMesh) {
     directory = path.substr(0, path.find_last_of('/'));
@@ -91,7 +91,7 @@ void Model::loadTexture(aiTextureType type, Mesh& mesh, const aiScene* scene, un
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-                glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, maxAnisotropy);
+                glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, Renderer::maxAnisotropy);
                 glBindTexture(GL_TEXTURE_2D, 0);
             }
             std::pair<std::string, Texture> loadedTexture(path, texture);
@@ -251,45 +251,6 @@ void Model::setUpInstances(std::vector<glm::vec4>& positions)
     glEnableVertexAttribArray(9);
     glVertexAttribPointer(9, 4, GL_FLOAT, GL_FALSE, sizeof(glm::vec4), (void*)0);
     glVertexAttribDivisor(9, 1);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
-}
-
-void Model::setUpInstances(std::vector<glm::vec4>& positions, std::vector<glm::vec4>& params,
-    std::vector<glm::vec4>& colors)
-{
-    if (instanceBufModel != 0) glDeleteBuffers(1, &instanceBufModel);
-    glGenBuffers(1, &instanceBufModel);
-    glBindBuffer(GL_ARRAY_BUFFER, instanceBufModel);
-    std::vector<glm::mat4> models;
-    for (int i = 0; i < positions.size(); i++) {
-        glm::mat4 model = glm::translate(glm::mat4(1.0), glm::vec3(positions.at(i)));
-        glm::vec4 color = colors.at(i);
-        float lightMax = std::max({ color.r, color.g, color.b });
-        float constant = params.at(i).x;
-        float linear = params.at(i).y;
-        float quadratic = params.at(i).z;
-        float radius =
-            (-linear + std::sqrtf(linear * linear - 4.0f * quadratic * (constant - (256.0f / 5.0f) * lightMax)))
-            / (2.0f * quadratic);
-        model = glm::scale(model, glm::vec3(radius));
-        models.push_back(model);
-    }
-    glBufferData(GL_ARRAY_BUFFER, models.size() * sizeof(glm::mat4), glm::value_ptr(models[0])
-        , GL_STATIC_DRAW);
-    glBindVertexArray(meshes.at(0).vao);
-    glEnableVertexAttribArray(5);
-    glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)0);
-    glEnableVertexAttribArray(6);
-    glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*) (sizeof(glm::vec4)));
-    glEnableVertexAttribArray(7);
-    glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(2*sizeof(glm::vec4)));
-    glEnableVertexAttribArray(8);
-    glVertexAttribPointer(8, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(3 * sizeof(glm::vec4)));
-    glVertexAttribDivisor(5, 1);
-    glVertexAttribDivisor(6, 1);
-    glVertexAttribDivisor(7, 1);
-    glVertexAttribDivisor(8, 1);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 }

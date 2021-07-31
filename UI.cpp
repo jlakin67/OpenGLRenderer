@@ -26,9 +26,9 @@ void UI::renderUI()
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
     
-    const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
-    ImGui::SetNextWindowPos(ImVec2(main_viewport->WorkPos.x + 650, main_viewport->WorkPos.y + 20), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(550, 680), ImGuiCond_FirstUseEver);
+    //const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
+    //ImGui::SetNextWindowPos(ImVec2(main_viewport->WorkPos.x + 650, main_viewport->WorkPos.y + 20), ImGuiCond_FirstUseEver);
+    //ImGui::SetNextWindowSize(ImVec2(550, 680), ImGuiCond_FirstUseEver);
     if (show_ui) {
         if (!ImGui::Begin("Settings", &show_ui, 0))
         {
@@ -49,6 +49,11 @@ void UI::renderUI()
             ImGui::RadioButton("No frustum", &Renderer::frustum_outline_mode, Renderer::NO_FRUSTUM_OUTLINE); ImGui::SameLine();
             ImGui::RadioButton("View frustum", &Renderer::frustum_outline_mode, Renderer::VIEW_FRUSTUM_OUTLINE); ImGui::SameLine();
             ImGui::RadioButton("Cascade frustum", &Renderer::frustum_outline_mode, Renderer::CASCADE_FRUSTUM_OUTLINE);
+            ImGui::Separator();
+            ImGui::Text("Camera mode:");
+            ImGui::Spacing();
+            ImGui::RadioButton("1", &cameraMode, Renderer::NO_FRUSTUM_OUTLINE); ImGui::SameLine();
+            ImGui::RadioButton("2", &cameraMode, Renderer::VIEW_FRUSTUM_OUTLINE);
             ImGui::End();
         }
         ImGui::Render();

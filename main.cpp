@@ -9,7 +9,6 @@ const char* glsl_version = "#version 430";
 double currentFrame = 0.0f, lastFrame = 0.0f, deltaTime = 0.0f;
 Camera camera(glm::vec3(0.0f, 1.0f, 0.0f));
 Camera cameraAlt(glm::vec3(0.0f, 1.0f, 0.0f));
-const GLfloat maxAnisotropy = 16.0f;
 GLFWwindow* window = NULL;
 
 int main(int argc, char* argv[])
