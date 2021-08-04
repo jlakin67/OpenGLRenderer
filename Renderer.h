@@ -11,7 +11,7 @@ extern GLuint SCR_HEIGHT;
 //contains public variables and functions
 namespace Renderer {
 	
-	void updateViewUniformBuffer(glm::mat4& view);
+	void updateViewUniformBuffer(glm::mat4& viewMatrix);
 	//debug scene used for previous versions of this code
 	void setupTestScene();
 	void renderTestScene();
@@ -75,6 +75,9 @@ namespace Renderer {
 	constexpr GLsizei numShadowCascades = 4;
 	extern const GLint shadowFilter;
 	extern const GLfloat shadowSplitLinearFactor;
+	struct ShadowUniformBlock {
+		GLfloat shadowMatrices[4 * 4 * maxShadowedPointLights];
+	};
 
 	//displaying for debugging purposes
 	enum RenderModes {RENDER_DEFAULT, RENDER_POSITION, RENDER_NORMAL, RENDER_ALBEDO, RENDER_DEPTH,

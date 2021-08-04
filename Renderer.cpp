@@ -5,24 +5,47 @@ namespace Renderer {
     
     namespace {
 
-        UBO uboMatrices;
-        UBO uboLights;
+        enum UBONames {UBO_MATRICES, UBO_LIGHTS, UBO_SHADOW_MATRICES, NUM_UBO_NAMES};
+        GLuint uboIDs[NUM_UBO_NAMES];
+
         void setupUniformBuffers() {
-            uboMatrices.initialize({ UBOData(UBOType::MATRIX), UBOData(UBOType::MATRIX), UBOData(UBOType::MATRIX) }, 0);
-            infiniteProj = glm::infinitePerspective(glm::radians(ZOOM), Renderer::aspectRatio, Renderer::near);
-            projection = glm::perspective(glm::radians(ZOOM), Renderer::aspectRatio, Renderer::near, Renderer::far);
-            uboMatrices.set(0, glm::value_ptr(view));
-            uboMatrices.set(1, glm::value_ptr(projection));
-            uboMatrices.set(2, glm::value_ptr(infiniteProj));
-            uboLights.initialize({ UBOData(UBOType::INT), UBOData(UBOType::VEC3), UBOData(UBOType::ARRAY, maxPointLights), UBOData(UBOType::ARRAY, maxPointLights),
-                            UBOData(UBOType::ARRAY, maxPointLights), UBOData(UBOType::VEC3), UBOData(UBOType::VEC4) }, 1);
-            uboLights.set(0, &numPointLights);
-            uboLights.set(1, &camera.pos);
-            uboLights.set(2, glm::value_ptr(lightPos[0]));
-            uboLights.set(3, glm::value_ptr(lightColor[0]));
-            uboLights.set(4, glm::value_ptr(lightParam[0]));
-            uboLights.set(5, glm::value_ptr(lightDir));
-            uboLights.set(6, glm::value_ptr(lightDirColor));
+            glGenBuffers(3, uboIDs);
+            glBindBuffer(GL_UNIFORM_BUFFER, uboIDs[UBO_MATRICES]);
+            glBufferData(GL_UNIFORM_BUFFER, sizeof(MatricesUniformBlock), NULL, GL_DYNAMIC_DRAW);
+            projection = glm::perspective(glm::radians(ZOOM), aspectRatio, near, far);
+            infiniteProj = glm::infinitePerspective(glm::radians(ZOOM), aspectRatio, near);
+            view = glm::lookAt(camera.pos, camera.pos + camera.front, glm::vec3(0.0f, 1.0f, 0.0f));
+            glBufferSubData(GL_UNIFORM_BUFFER, offsetof(MatricesUniformBlock, view), 
+                sizeof(glm::mat4), glm::value_ptr(view));
+            glBufferSubData(GL_UNIFORM_BUFFER, offsetof(MatricesUniformBlock, projection), 
+                sizeof(glm::mat4), glm::value_ptr(projection));
+            glBufferSubData(GL_UNIFORM_BUFFER, offsetof(MatricesUniformBlock, infiniteProj), 
+                sizeof(glm::mat4), glm::value_ptr(infiniteProj));
+            glBindBufferBase(GL_UNIFORM_BUFFER, 0, uboIDs[UBO_MATRICES]);
+            glBindBuffer(GL_UNIFORM_BUFFER, uboIDs[UBO_LIGHTS]);
+            glBufferData(GL_UNIFORM_BUFFER, sizeof(LightsUniformBlock), NULL, GL_DYNAMIC_DRAW);
+            glm::ivec4 paddedNumLights(numPointLights, 0, 0, 0);
+            glBufferSubData(GL_UNIFORM_BUFFER, offsetof(LightsUniformBlock, numLights), 
+                sizeof(glm::ivec4), glm::value_ptr(paddedNumLights));
+            glm::vec4 paddedCameraPos = glm::vec4(camera.pos, 1.0f);
+            glBufferSubData(GL_UNIFORM_BUFFER, offsetof(LightsUniformBlock, cameraPos),
+                sizeof(glm::vec4), glm::value_ptr(paddedCameraPos));
+            glBufferSubData(GL_UNIFORM_BUFFER, offsetof(LightsUniformBlock, lightPos), 
+                numPointLights * sizeof(glm::vec4), glm::value_ptr(lightPos[0]));
+            glBufferSubData(GL_UNIFORM_BUFFER, offsetof(LightsUniformBlock, lightColor),
+                numPointLights * sizeof(glm::vec4), glm::value_ptr(lightColor[0]));
+            glBufferSubData(GL_UNIFORM_BUFFER, offsetof(LightsUniformBlock, lightParam),
+                numPointLights * sizeof(glm::vec4), glm::value_ptr(lightParam[0]));
+            glm::vec4 paddedLightDir(lightDir, 0.0f);
+            glBufferSubData(GL_UNIFORM_BUFFER, offsetof(LightsUniformBlock, lightDir),
+                sizeof(glm::vec4), glm::value_ptr(paddedLightDir));
+            glBufferSubData(GL_UNIFORM_BUFFER, offsetof(LightsUniformBlock, lightDirColor),
+                sizeof(glm::vec4), glm::value_ptr(lightDirColor));
+            glBindBufferBase(GL_UNIFORM_BUFFER, 1, uboIDs[UBO_LIGHTS]);
+            glBindBuffer(GL_UNIFORM_BUFFER, uboIDs[UBO_SHADOW_MATRICES]);
+            glBufferData(GL_UNIFORM_BUFFER, sizeof(ShadowUniformBlock), NULL, GL_STATIC_DRAW);
+            glBindBufferBase(GL_UNIFORM_BUFFER, 2, uboIDs[UBO_SHADOW_MATRICES]);
+            glBindBuffer(GL_UNIFORM_BUFFER, 0);
         }
 
         GLuint quadEBO = 0, quadVAO = 0, quadVBO = 0;
@@ -285,7 +308,7 @@ namespace Renderer {
             shadowMapShader.setInt("numShadowedLights", numPointLights);
             //non-moving light for now
             glm::vec3 lightPosition = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-            for (int i = 0; i < 6; i++) {
+            for (int j = 0; j < 6; j++) {
                 viewMatrices.push_back(
                     glm::lookAt(lightPosition, lightPosition + glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
                 viewMatrices.push_back(
@@ -722,9 +745,15 @@ namespace Renderer {
     }
     
 
-    void updateViewUniformBuffer(glm::mat4& view) {
-        uboMatrices.set(0, glm::value_ptr(view));
-        uboLights.set(1, glm::value_ptr(camera.pos));
+    void updateViewUniformBuffer(glm::mat4& viewMatrix) {
+        glBindBuffer(GL_UNIFORM_BUFFER, uboIDs[UBO_MATRICES]);
+        glBufferSubData(GL_UNIFORM_BUFFER, offsetof(MatricesUniformBlock, view),
+            sizeof(glm::mat4), glm::value_ptr(viewMatrix));
+        glBindBuffer(GL_UNIFORM_BUFFER, uboIDs[UBO_LIGHTS]);
+        glm::vec4 paddedCameraPos = glm::vec4(camera.pos, 1.0f);
+        glBufferSubData(GL_UNIFORM_BUFFER, offsetof(LightsUniformBlock, cameraPos),
+            sizeof(glm::vec4), glm::value_ptr(paddedCameraPos));
+        glBindBuffer(GL_UNIFORM_BUFFER, 0);
     }
 
     void setupTestScene() {
