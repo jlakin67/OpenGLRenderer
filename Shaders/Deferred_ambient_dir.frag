@@ -49,14 +49,16 @@ float cascadedShadowCalculation(float viewDepth, vec4 worldPosition) {
 						   vec4(0.0, 0.5, 0.0, 0.0),
 						   vec4(0.0, 0.0, 0.5, 0.0),
 						   vec4(0.5, 0.5, 0.5, 1.0));
+	mat4 constantShadowCascadeMatrix = cascadedShadowMatrices[0];
 	mat4 shadowCascadeMatrix = cascadedShadowMatrices[shadowCascadeIndex];
 	vec4 shadowTextureCoordinate = biasMatrix*shadowCascadeMatrix*worldPosition;
-	float projectedDepth = shadowTextureCoordinate.z;
+	vec4 constantShadowTexCoord =  biasMatrix*constantShadowCascadeMatrix*worldPosition;
+	float projectedDepth = constantShadowTexCoord.z;
 	float dfdx = dFdx(projectedDepth);
 	float dfdy = dFdy(projectedDepth);
 	float depthSlope = sqrt(dfdx*dfdx + dfdy*dfdy);
-	float bias = 0.05*depthSlope + 0.005;
-	bias /= (shadowCascadeIndex + 4.0f);
+	float bias = 0.05*depthSlope + 0.001;
+	//bias /= (shadowCascadeIndex + 4.0f);
 	shadowTextureCoordinate.z -= bias;
 	shadowTextureCoordinate.xyzw = shadowTextureCoordinate.xywz; //last component is depth reference for comparison
 	//second to last is the index into the texture array

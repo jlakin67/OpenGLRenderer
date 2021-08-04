@@ -4,9 +4,9 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-const GLfloat SENSITIVITY = 1.0f;
-const GLfloat SPEED = 8.0f;
-const GLfloat ZOOM = 45.0f;
+constexpr GLfloat SENSITIVITY = 1.0f;
+constexpr GLfloat SPEED = 8.0f;
+constexpr GLfloat ZOOM = 45.0f;
 
 class Camera {
 public:

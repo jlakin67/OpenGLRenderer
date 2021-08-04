@@ -64,7 +64,8 @@ int main(int argc, char* argv[])
     //initialize imgui
     UI::initialize();
 
-    Renderer::setupTestScene();
+    Renderer* renderer = Renderer::getInstance();
+    renderer->setupTestScene();
 
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glfwSetTime(0);
@@ -74,18 +75,18 @@ int main(int argc, char* argv[])
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-        if (cameraMode == 0) {
+        if (Renderer::cameraMode == 0) {
             Renderer::view = glm::lookAt(camera.pos, camera.pos + camera.front, glm::vec3(0.0f, 1.0f, 0.0f));
             processInput(window, camera);
-            Renderer::updateViewUniformBuffer(Renderer::view);
+            renderer->updateViewUniformBuffer(Renderer::view);
         }
-        else if (cameraMode == 1) {
+        else if (Renderer::cameraMode == 1) {
             Renderer::altView = glm::lookAt(cameraAlt.pos, cameraAlt.pos + cameraAlt.front, glm::vec3(0.0f, 1.0f, 0.0f));
             processInput(window, cameraAlt);
-            Renderer::updateViewUniformBuffer(Renderer::altView);
+            renderer->updateViewUniformBuffer(Renderer::altView);
         }
 
-        Renderer::renderTestScene();
+        renderer->renderTestScene();
 
         //Imgui frame
         UI::renderUI();

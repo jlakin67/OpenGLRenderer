@@ -178,6 +178,7 @@
     <ClInclude Include="Generic.h" />
     <ClInclude Include="Model.h" />
     <ClInclude Include="Renderer.h" />
+    <ClInclude Include="Renderer_constants.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="UBO.h" />
     <ClInclude Include="UI.h" />

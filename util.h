@@ -11,9 +11,7 @@
 #include "Shader.h"
 #include "UI.h"
 
-extern GLuint SCR_WIDTH, SCR_HEIGHT;
 extern double currentFrame, lastFrame, deltaTime;
-extern int cameraMode;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void APIENTRY glDebugOutput(GLenum source, GLenum type, unsigned int id, GLenum severity,

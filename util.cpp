@@ -4,15 +4,14 @@ bool firstMove = true, mousePressed = false;
 double lastX = 0, lastY = 0, deltaX = 0, deltaY = 0;
 extern Camera camera;
 extern Camera cameraAlt;
-GLuint SCR_WIDTH = 1600;
-GLuint SCR_HEIGHT = 900;
+GLuint screenWidth = SCR_WIDTH;
+GLuint screenHeight = SCR_HEIGHT;
 bool space_key_pressed = false;
-int cameraMode = 0;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
-    SCR_WIDTH = width;
-    SCR_HEIGHT = height;
+    screenWidth = width;
+    screenHeight = height;
     glViewport(0, 0, width, height);
 }
 
@@ -101,6 +100,6 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
         deltaY = 0;
     }
     lastX = xpos; lastY = ypos;
-    if (cameraMode == 0) camera.processMouse(window, deltaX, deltaY, uiHovered);
-    if (cameraMode == 1) cameraAlt.processMouse(window, deltaX, deltaY, uiHovered);
+    if (Renderer::cameraMode == 0) camera.processMouse(window, deltaX, deltaY, uiHovered);
+    if (Renderer::cameraMode == 1) cameraAlt.processMouse(window, deltaX, deltaY, uiHovered);
 }

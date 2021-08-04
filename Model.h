@@ -11,7 +11,7 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 #include "Shader.h"
-#include "Renderer.h"
+#include "Renderer_constants.h"
 
 struct Vertex {
     glm::vec3 position; //layout (location = 0) in vec3 aPos;
