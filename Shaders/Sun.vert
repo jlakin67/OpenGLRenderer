@@ -17,13 +17,11 @@ layout (std140, binding = 1) uniform Lights {
 	vec4 lightDirColor;
 };
 
-uniform float sphereRadius = 6.0;
-
 void main() {
 	mat4 model = mat4(1.0);
 	model[3] = vec4(45*lightDir, 1.0);
 	mat4 newView = view;
 	newView[3] = vec4(0,0,0,1);
-	vec4 pos = projection*newView*model*vec4(aPos / sphereRadius, 1.0);
+	vec4 pos = projection*newView*model*vec4(aPos, 1.0);
 	gl_Position = pos.xyww;
 }

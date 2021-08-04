@@ -1,16 +1,22 @@
 #pragma once
 #include "util.h"
+#include "Axis.h"
+#include "UBO.h"
 
 extern Camera camera;
 extern Camera cameraAlt;
 extern GLuint SCR_WIDTH;
 extern GLuint SCR_HEIGHT;
 
-//contains everything to do with rendering
+//contains public variables and functions
 namespace Renderer {
+	
+	void updateViewUniformBuffer(glm::mat4& view);
+	//debug scene used for previous versions of this code
+	void setupTestScene();
+	void renderTestScene();
 
-	void initializeUniformBuffer(GLuint bp);
-
+	//screen projection
 	extern const float pi;
 	extern const GLfloat near;
 	extern const GLfloat far;
@@ -20,20 +26,21 @@ namespace Renderer {
 	extern const float right;
 	extern const float left;
 	extern const GLfloat maxDepth;
-	extern glm::mat4 projection;
 	extern glm::mat4 view;
 	extern glm::mat4 altView;
+	extern glm::mat4 projection;
 	extern glm::mat4 infiniteProj;
 	struct MatricesUniformBlock {
-		glm::mat4 view;
-		glm::mat4 projection;
-		glm::mat4 infiniteProjection;
+		GLfloat view[4*4];
+		GLfloat projection[4*4];
+		GLfloat infiniteProj[4*4];
 	};
-	extern MatricesUniformBlock matrices;
 
 	extern const GLfloat maxAnisotropy;
 
+	//light and shadow
 	constexpr int maxPointLights = 64;
+	constexpr int maxShadowedPointLights = 30;
 	extern int numPointLights;
 	extern const GLfloat specularExponent;
 	extern const GLfloat lightLinear;
@@ -45,15 +52,17 @@ namespace Renderer {
 	extern glm::vec4 lightDirColor;
 	//padding made explicit
 	struct LightsUniformBlock {
-		glm::ivec4 numLights; //int
-		glm::vec4 cameraPos; //vec3
-		glm::vec4 lightPos[maxPointLights];
-		glm::vec4 lightColor[maxPointLights];
-		glm::vec4 lightParam[maxPointLights]; //x: lightConstant, y: lightLinear, z: lightQuadratic, w: specularExponent
-		glm::vec4 lightDir; //vec3
-		glm::vec4 lightDirColor;
+		GLint numLights[4]; //int
+		GLfloat cameraPos[4]; //vec3
+		GLfloat lightPos[4*maxPointLights];
+		GLfloat lightColor[4*maxPointLights];
+		GLfloat lightParam[4*maxPointLights]; //x: lightConstant, y: lightLinear, z: lightQuadratic, w: specularExponent
+		GLfloat lightDir[4]; //vec3
+		GLfloat lightDirColor[4];
 	};
-	extern LightsUniformBlock lights;
+	extern std::vector<glm::vec4> lightPos;
+	extern std::vector<glm::vec4> lightColor;
+	extern std::vector<glm::vec4> lightParam;
 	extern const GLfloat ambientStrength;
 	extern const GLuint shadowWidth;
 	extern const GLuint shadowHeight;
@@ -63,7 +72,7 @@ namespace Renderer {
 	extern GLfloat shadow_near;
 	extern GLfloat shadow_far;
 	extern const GLsizei numShadowMipmaps;
-	extern const GLsizei numShadowCascades;
+	constexpr GLsizei numShadowCascades = 4;
 	extern const GLint shadowFilter;
 	extern const GLfloat shadowSplitLinearFactor;
 
@@ -78,3 +87,13 @@ namespace Renderer {
 
 	extern const GLfloat cube_vertices[108];
 }
+
+class ShadowCascadeTest {
+public:
+	ShadowCascadeTest() : vao{ 0 }, vbo{ 0 } {}
+	void setupBuffer(int numShadowCascades);
+	void fillBuffer(int numShadowCascades, glm::vec3* cascadedShadowBounds);
+	void draw();
+	GLuint vao, vbo;
+	std::vector<GLuint> indices;
+};

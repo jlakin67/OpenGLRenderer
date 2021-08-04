@@ -160,6 +160,7 @@
     <ClCompile Include="Renderer.cpp" />
     <ClCompile Include="Shader.cpp" />
     <ClCompile Include="stb_image.cpp" />
+    <ClCompile Include="UBO.cpp" />
     <ClCompile Include="UI.cpp" />
     <ClCompile Include="util.cpp" />
   </ItemGroup>
@@ -178,6 +179,7 @@
     <ClInclude Include="Model.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="Shader.h" />
+    <ClInclude Include="UBO.h" />
     <ClInclude Include="UI.h" />
     <ClInclude Include="util.h" />
   </ItemGroup>
@@ -191,8 +193,8 @@
     <None Include="Shaders\Deferred_ambient_dir.frag" />
     <None Include="Shaders\Deferred_lv_bp.frag" />
     <None Include="Shaders\Deferred_lv_bp.vert" />
-    <None Include="Shaders\Light.frag" />
-    <None Include="Shaders\Light.vert" />
+    <None Include="Shaders\LightDisplay.frag" />
+    <None Include="Shaders\LightDisplay.vert" />
     <None Include="Shaders\Model_basic.frag" />
     <None Include="Shaders\Model_basic.vert" />
     <None Include="Shaders\Model_basic_texture.frag" />

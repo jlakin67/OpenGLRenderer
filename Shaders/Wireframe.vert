@@ -18,7 +18,7 @@ void main() {
 	vec3 newPos = aPos;
 	if (instanced) {
 		newModel = aModel;
-		newPos = aPos / sphereRadius;
+		//newPos = aPos / sphereRadius;
 	}
 	gl_Position = infiniteProj*view*newModel*vec4(newPos, 1.0);
 }

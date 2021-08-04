@@ -52,8 +52,8 @@ void UI::renderUI()
             ImGui::Separator();
             ImGui::Text("Camera mode:");
             ImGui::Spacing();
-            ImGui::RadioButton("1", &cameraMode, Renderer::NO_FRUSTUM_OUTLINE); ImGui::SameLine();
-            ImGui::RadioButton("2", &cameraMode, Renderer::VIEW_FRUSTUM_OUTLINE);
+            ImGui::RadioButton("1", &cameraMode, 0); ImGui::SameLine();
+            ImGui::RadioButton("2", &cameraMode, 1);
             ImGui::End();
         }
         ImGui::Render();

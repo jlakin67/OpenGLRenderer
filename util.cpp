@@ -101,5 +101,6 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
         deltaY = 0;
     }
     lastX = xpos; lastY = ypos;
-    camera.processMouse(window, deltaX, deltaY, uiHovered);
+    if (cameraMode == 0) camera.processMouse(window, deltaX, deltaY, uiHovered);
+    if (cameraMode == 1) cameraAlt.processMouse(window, deltaX, deltaY, uiHovered);
 }

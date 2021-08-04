@@ -72,6 +72,9 @@
     <ClCompile Include="Renderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="UBO.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Axis.h">
@@ -122,6 +125,9 @@
     <ClInclude Include="Renderer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="UBO.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\Axis.frag">
@@ -151,10 +157,10 @@
     <None Include="Shaders\Deferred_lv_bp.vert">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="Shaders\Light.frag">
+    <None Include="Shaders\LightDisplay.frag">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="Shaders\Light.vert">
+    <None Include="Shaders\LightDisplay.vert">
       <Filter>Shaders</Filter>
     </None>
     <None Include="Shaders\Model_basic.frag">

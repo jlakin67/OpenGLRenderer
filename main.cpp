@@ -27,14 +27,14 @@ int main(int argc, char* argv[])
     {
         std::cout << "Failed to create GLFW window\n" << std::endl;
         glfwTerminate();
-        return -1;
+        return EXIT_FAILURE;
     }
     glfwMakeContextCurrent(window);
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
         std::cout << "Failed to initialize GLAD\n" << std::endl;
         glfwTerminate();
-        return -1;
+        return EXIT_FAILURE;
     }
     if (useDebug) {
         GLint flags; glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
         else {
             std::cout << "Failed to create debug context\n";
             glfwTerminate();
-            return -1;
+            return EXIT_FAILURE;
         }
     }
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
@@ -59,17 +59,33 @@ int main(int argc, char* argv[])
     printf("Renderer:        %s\n", glGetString(GL_RENDERER));
     printf("Version OpenGL:  %s\n", glGetString(GL_VERSION));
     printf("Version GLSL:    %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
+    stbi_set_flip_vertically_on_load(true);
 
     //initialize imgui
     UI::initialize();
 
+    Renderer::setupTestScene();
+
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glfwSetTime(0);
     while (!glfwWindowShouldClose(window)) {
+
         currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
-        processInput(window, camera);
+
+        if (cameraMode == 0) {
+            Renderer::view = glm::lookAt(camera.pos, camera.pos + camera.front, glm::vec3(0.0f, 1.0f, 0.0f));
+            processInput(window, camera);
+            Renderer::updateViewUniformBuffer(Renderer::view);
+        }
+        else if (cameraMode == 1) {
+            Renderer::altView = glm::lookAt(cameraAlt.pos, cameraAlt.pos + cameraAlt.front, glm::vec3(0.0f, 1.0f, 0.0f));
+            processInput(window, cameraAlt);
+            Renderer::updateViewUniformBuffer(Renderer::altView);
+        }
+
+        Renderer::renderTestScene();
 
         //Imgui frame
         UI::renderUI();
@@ -81,5 +97,5 @@ int main(int argc, char* argv[])
     }
 
     glfwTerminate();
-    return 0;
+    return EXIT_SUCCESS;
 }

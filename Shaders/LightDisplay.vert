@@ -6,7 +6,6 @@ layout (location = 9) in vec4 offset;
 flat out int instanceID;
 uniform mat4 model;
 uniform bool instanced = false;
-uniform float sphereRadius = 6.0;
 
 layout (std140, binding = 0) uniform Matrices {
 	uniform mat4 view;
@@ -21,5 +20,5 @@ void main() {
 	}
 	instanceID = gl_InstanceID;
 	
-	gl_Position = projection*view*newModel*vec4(aPos / sphereRadius, 1.0);
+	gl_Position = projection*view*newModel*vec4(aPos, 1.0);
 }

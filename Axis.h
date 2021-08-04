@@ -3,7 +3,8 @@
 
 class Axis {
 	public:
-		Axis() {
+		Axis() { vao = 0, vbo = 0; }
+		void init() {
 			glGenVertexArrays(1, &vao);
 			glGenBuffers(1, &vbo);
 			glBindVertexArray(vao);

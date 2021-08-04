@@ -1,8 +1,8 @@
 #version 430 core
 
 uniform float shadowFar = 25.0;
-uniform int lightNum;
 in vec3 worldPos;
+flat in int lightNum;
 
 layout (std140, binding = 1) uniform Lights {
 	int numLights;
