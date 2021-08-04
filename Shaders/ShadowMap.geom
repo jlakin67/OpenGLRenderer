@@ -13,22 +13,20 @@ layout (std140, binding = 1) uniform Lights {
 	vec4 lightDirColor;
 };
 
-uniform mat4 viewMatrices[6];
-uniform mat4 shadowProj;
+layout (std140, binding = 2) uniform ShadowMatrices {
+	mat4 shadowMatrices[6*30];
+};
+
 uniform int numShadowedLights;
 out vec3 worldPos;
 flat out int lightNum;
 
 void main() {
 	for (int i = 0; i < numShadowedLights; i++) {
-		mat4 shadowMatrix = viewMatrices[gl_InvocationID];
-		vec4 translate = shadowMatrix*lightPos[i];
-		shadowMatrix[3] = -translate;
-		shadowMatrix = shadowProj*shadowMatrix;
 		for (int j = 0; j < 3; j++) {
 			gl_Layer = 6*i + gl_InvocationID;
 			worldPos = gl_in[j].gl_Position.xyz;
-			gl_Position = shadowMatrix*gl_in[j].gl_Position;
+			gl_Position = shadowMatrices[6*i + gl_InvocationID]*gl_in[j].gl_Position;
 			lightNum = i;
 			EmitVertex();
 		}

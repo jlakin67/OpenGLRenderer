@@ -24,4 +24,5 @@ void main() {
 	newView[3] = vec4(0,0,0,1);
 	vec4 pos = projection*newView*model*vec4(aPos, 1.0);
 	gl_Position = pos.xyww;
+	gl_Position.z -= 0.01;
 }

@@ -76,7 +76,7 @@ namespace Renderer {
 	extern const GLint shadowFilter;
 	extern const GLfloat shadowSplitLinearFactor;
 	struct ShadowUniformBlock {
-		GLfloat shadowMatrices[4 * 4 * maxShadowedPointLights];
+		GLfloat shadowMatrices[4 * 4 * 6 * maxShadowedPointLights];
 	};
 
 	//displaying for debugging purposes

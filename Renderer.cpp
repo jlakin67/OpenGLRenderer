@@ -282,8 +282,7 @@ namespace Renderer {
         GLuint shadowFramebufferID = 0;
         GLuint shadowCubemapArrayID = 0;
         Shader shadowMapShader;
-        std::vector<glm::mat4> viewMatrices;
-        UBO shadowMatrices;
+        std::vector<glm::mat4> shadowMatrices;
         void setupPointShadowMaps() {
             glGenTextures(1, &shadowCubemapArrayID);
             glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, shadowCubemapArrayID);
@@ -307,24 +306,23 @@ namespace Renderer {
             shadowMapShader.setFloat("shadowFar", shadow_far);
             shadowMapShader.setInt("numShadowedLights", numPointLights);
             //non-moving light for now
-            glm::vec3 lightPosition = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-            for (int j = 0; j < 6; j++) {
-                viewMatrices.push_back(
-                    glm::lookAt(lightPosition, lightPosition + glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
-                viewMatrices.push_back(
-                    glm::lookAt(lightPosition, lightPosition + glm::vec3(-1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
-                viewMatrices.push_back(
-                    glm::lookAt(lightPosition, lightPosition + glm::vec3(0.0, 1.0, 0.0), glm::vec3(0.0, 0.0, 1.0)));
-                viewMatrices.push_back(
-                    glm::lookAt(lightPosition, lightPosition + glm::vec3(0.0, -1.0, 0.0), glm::vec3(0.0, 0.0, -1.0)));
-                viewMatrices.push_back(
-                    glm::lookAt(lightPosition, lightPosition + glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, -1.0, 0.0)));
-                viewMatrices.push_back(
-                    glm::lookAt(lightPosition, lightPosition + glm::vec3(0.0, 0.0, -1.0), glm::vec3(0.0, -1.0, 0.0)));
+            for (int i = 0; i < numPointLights; i++) {
+                shadowMatrices.push_back(shadowProj *
+                    glm::lookAt(glm::vec3(lightPos.at(i)), glm::vec3(lightPos.at(i)) + glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
+                shadowMatrices.push_back(shadowProj *
+                    glm::lookAt(glm::vec3(lightPos.at(i)), glm::vec3(lightPos.at(i)) + glm::vec3(-1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
+                shadowMatrices.push_back(shadowProj *
+                    glm::lookAt(glm::vec3(lightPos.at(i)), glm::vec3(lightPos.at(i)) + glm::vec3(0.0, 1.0, 0.0), glm::vec3(0.0, 0.0, 1.0)));
+                shadowMatrices.push_back(shadowProj *
+                    glm::lookAt(glm::vec3(lightPos.at(i)), glm::vec3(lightPos.at(i)) + glm::vec3(0.0, -1.0, 0.0), glm::vec3(0.0, 0.0, -1.0)));
+                shadowMatrices.push_back(shadowProj *
+                    glm::lookAt(glm::vec3(lightPos.at(i)), glm::vec3(lightPos.at(i)) + glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, -1.0, 0.0)));
+                shadowMatrices.push_back(shadowProj *
+                    glm::lookAt(glm::vec3(lightPos.at(i)), glm::vec3(lightPos.at(i)) + glm::vec3(0.0, 0.0, -1.0), glm::vec3(0.0, -1.0, 0.0)));
             }
-            glUniformMatrix4fv(glGetUniformLocation(shadowMapShader.program, "viewMatrices"),
-                6, GL_FALSE, glm::value_ptr(viewMatrices[0]));
-            shadowMapShader.setMat4("shadowProj", glm::value_ptr(shadowProj));
+            glBindBuffer(GL_UNIFORM_BUFFER, uboIDs[UBO_SHADOW_MATRICES]);
+            glBufferSubData(GL_UNIFORM_BUFFER, 0, 6*numPointLights*sizeof(glm::mat4), glm::value_ptr(shadowMatrices[0]));
+            glBindBuffer(GL_UNIFORM_BUFFER, 0);
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
         }
 
@@ -689,10 +687,9 @@ namespace Renderer {
             if (cameraMode == 1) cubemapView = glm::mat4(glm::mat3(altView));
             skyboxShader.useProgram();
             skyboxShader.setMat4("view", glm::value_ptr(cubemapView)); //must set view for skybox since it has a separate view
-            if (skybox_mode == Renderer::SKYBOX_DEFAULT) { //draw default skybox
+            if (skybox_mode == SKYBOX_DEFAULT) { //draw default skybox
                 glActiveTexture(GL_TEXTURE0);
                 glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxCubemapID);
-                skyboxShader.useProgram();
                 glDepthFunc(GL_LEQUAL);
                 glBindVertexArray(cubeVAO);
                 glDrawArrays(GL_TRIANGLES, 0, 36);
@@ -707,10 +704,11 @@ namespace Renderer {
                 glBindVertexArray(0);
                 glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
             }
-            else if (skybox_mode == Renderer::SKYBOX_SHADOW_MAP) { //draw one of the shadow cubemaps as skybox
+            else if (skybox_mode == SKYBOX_SHADOW_MAP) { //draw one of the shadow cubemaps as skybox
                 glUseProgram(0);
                 glActiveTexture(GL_TEXTURE0);
                 glBindTexture(GL_TEXTURE_CUBE_MAP, omniShadowMapViewID);
+                glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_NONE);
                 skyboxShader.useProgram();
                 glDepthFunc(GL_LEQUAL);
                 glBindVertexArray(cubeVAO);
@@ -759,11 +757,11 @@ namespace Renderer {
     void setupTestScene() {
         setupPlaneMesh();
         setupCubeMesh();
-        setupSkybox();
         setupTestSceneLights();
         setupTestSceneModel();
         setupTestScenePlane();
         setupUniformBuffers();
+        setupSkybox();
         setupCascadedShadowMaps();
         setupDirectionalLightShader();
         setupPointShadowMaps();
