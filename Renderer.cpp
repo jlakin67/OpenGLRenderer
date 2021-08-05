@@ -482,6 +482,7 @@ void Renderer::renderTestSceneDeferredPass() {
 	glBindVertexArray(quadVAO);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 	glBindVertexArray(0);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 
@@ -579,6 +580,7 @@ void Renderer::renderTestScenePointShadowMaps() {
 
 void Renderer::renderTestSceneLightingPass() {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
 	//separate lighting passes for deferred
 	glDisable(GL_DEPTH_TEST);
 	//ambient + directional pass
@@ -747,10 +749,10 @@ void Renderer::renderTestScene() {
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
 	else {
+		renderTestSceneDeferredPass();
 		renderTestSceneShadowMapCascades();
 		fillShadowCascadeBuffer();
 		renderTestScenePointShadowMaps();
-		renderTestSceneDeferredPass();
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		if (render_mode == RENDER_DEFAULT) {
 			renderTestSceneLightingPass();
