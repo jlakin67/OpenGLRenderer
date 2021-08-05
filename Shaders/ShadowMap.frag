@@ -1,8 +1,14 @@
 #version 430 core
 
 uniform float shadowFar = 25.0;
-in vec3 worldPos;
-flat in int lightNum;
+uniform bool containsDiffuse = false;
+uniform sampler2D texture_diffuse0;
+
+in GS_FS_Interface {
+    vec3 worldPos;
+    vec2 texCoord;
+    flat int lightNum;
+} fs_in;
 
 layout (std140, binding = 1) uniform Lights {
 	int numLights;
@@ -15,7 +21,10 @@ layout (std140, binding = 1) uniform Lights {
 };
 
 void main() {
-	vec3 displacement = lightPos[lightNum].xyz - worldPos;
+	if (containsDiffuse) {
+		if (texture(texture_diffuse0, fs_in.texCoord).a < 0.01) discard;
+	}
+	vec3 displacement = lightPos[fs_in.lightNum].xyz - fs_in.worldPos;
 	gl_FragDepth = length(displacement) / shadowFar;
 	
 }

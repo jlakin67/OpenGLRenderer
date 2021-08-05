@@ -554,7 +554,7 @@ void Renderer::renderTestSceneShadowMapCascades() {
 	glClear(GL_DEPTH_BUFFER_BIT);
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
-	testModel.draw(cascadedShadowMapShader, glm::vec4(0.0, 0.0, 0.0, 0.0), true);
+	testModel.draw(cascadedShadowMapShader, glm::vec4(0.0, 0.0, 0.0, 0.0), false);
 	glBindVertexArray(quadVAO);
 	cascadedShadowMapShader.setMat4("model", glm::value_ptr(quadModel));
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
@@ -570,7 +570,7 @@ void Renderer::renderTestScenePointShadowMaps() {
 	glClearDepth(1.0f);
 	glClear(GL_DEPTH_BUFFER_BIT);
 	glEnable(GL_POLYGON_OFFSET_FILL);
-	testModel.draw(shadowMapShader, glm::vec4(0.0f, 0.0f, 0.0f, 0.0f), true);
+	testModel.draw(shadowMapShader, glm::vec4(0.0f, 0.0f, 0.0f, 0.0f), false);
 	glBindVertexArray(quadVAO);
 	shadowMapShader.setMat4("model", glm::value_ptr(quadModel));
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);

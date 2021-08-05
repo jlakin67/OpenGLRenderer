@@ -58,7 +58,7 @@ void main() {
 	if (normal.a == 0) discard;
 	vec4 position = texture(gPosition, texCoord);
 	if (position.a == 0) discard;
-	//if (length(position - light_model[3]) > light_model[0][0]) discard;
+	if (length(position - light_model[3]) > light_model[0][0]) discard;
 	vec4 albedoSpec = texture(gAlbedoSpec, texCoord);
 	vec4 diffuse = vec4(albedoSpec.rgb, 1.0);
 	vec3 finalColor = vec3(0,0,0);
