@@ -83,7 +83,7 @@ public:
 private:
 
 	Renderer() = default;
-	~Renderer() = default;
+	~Renderer() { delete instance; }
 
 	static Renderer* instance;
 
@@ -166,10 +166,8 @@ private:
 
 	glm::mat4 cascadedShadowMatrices[numShadowCascades];
 	glm::mat4 cameraViewToWorld = glm::inverse(view);
-	glm::mat4 cascadedOrthos[numShadowCascades];
-	glm::mat4 dirLightViews[numShadowCascades];
 	glm::mat4 lightViewtoWorld = glm::mat4(1.0f);
-	glm::vec3 tempShadowBounds[4 * (numShadowCascades + 1)];
+	glm::vec3 worldShadowBounds[4 * (numShadowCascades + 1)];
 	glm::vec3 cascadedShadowBoxBounds[8 * (numShadowCascades + 1)];
 	void renderTestSceneShadowMapCascades();
 	

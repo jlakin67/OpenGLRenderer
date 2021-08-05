@@ -55,7 +55,7 @@ float cascadedShadowCalculation(float viewDepth, vec4 worldPosition) {
 	float depthSlope = sqrt(dfdx*dfdx + dfdy*dfdy);
 	
 	//float depthSlope = 1.0f - max(dot(normalize(normal), lightDir), 0.0f);
-	float bias = 0.05*depthSlope + 0.001;
+	float bias = 0.05*depthSlope + 0.005;
 	//bias /= (shadowCascadeIndex*shadowCascadeIndex + 3.5f);
 	shadowTextureCoordinate.z -= bias;
 	shadowTextureCoordinate.xyzw = shadowTextureCoordinate.xywz; //last component is depth reference for comparison

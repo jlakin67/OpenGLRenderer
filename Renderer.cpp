@@ -212,9 +212,6 @@ void Renderer::setupCascadedShadowMaps() {
 		cascadedShadowViewports.push_back(static_cast<GLfloat>(shadowCascadeHeight));
 		shadowSplitDepths[i] = shadowSplitLinearFactor * near * std::powf(far / near, static_cast<GLfloat>(i) / static_cast<GLfloat>(numShadowCascades)) +
 			(1.0f - shadowSplitLinearFactor) * depthSplitFuncLinear(near, far, numShadowCascades, i);
-		//in render loop transform each of these points to light space from view space
-		//which would involve a camera view to model matrix (just set the 4th column to 0 0 0 1 , transpose it, then set 4th column to camera position)
-		//followed by the light view matrix
 		splitScale = shadowSplitDepths[i] / near;
 		cascadedShadowBounds[4 * i + 0] = splitScale * glm::vec3(left, top, -near); //upper left
 		cascadedShadowBounds[4 * i + 1] = splitScale * glm::vec3(right, top, -near); //upper right
@@ -492,34 +489,36 @@ void Renderer::renderTestSceneShadowMapCascades() {
 	glm::mat4 dirLightView = glm::lookAt(camera.pos, camera.pos - lightDir, glm::vec3(0.0f, 1.0f, 0.0f));
 	cameraViewToWorld = glm::inverse(view);
 	lightViewtoWorld = glm::inverse(dirLightView);
+	//using a bounding box to construct view and orthographic matrices
+	//gets rid of shimmering due to camera rotation
 	for (int i = 0; i < numShadowCascades; i++) {
-		tempShadowBounds[4 * i + 0] = cameraViewToWorld * glm::vec4(cascadedShadowBounds[4 * i + 0], 1.0f);
-		tempShadowBounds[4 * i + 1] = cameraViewToWorld * glm::vec4(cascadedShadowBounds[4 * i + 1], 1.0f);
-		tempShadowBounds[4 * i + 2] = cameraViewToWorld * glm::vec4(cascadedShadowBounds[4 * i + 2], 1.0f);
-		tempShadowBounds[4 * i + 3] = cameraViewToWorld * glm::vec4(cascadedShadowBounds[4 * i + 3], 1.0f);
-		tempShadowBounds[4 * i + 4] = cameraViewToWorld * glm::vec4(cascadedShadowBounds[4 * i + 4], 1.0f);
-		tempShadowBounds[4 * i + 5] = cameraViewToWorld * glm::vec4(cascadedShadowBounds[4 * i + 5], 1.0f);
-		tempShadowBounds[4 * i + 6] = cameraViewToWorld * glm::vec4(cascadedShadowBounds[4 * i + 6], 1.0f);
-		tempShadowBounds[4 * i + 7] = cameraViewToWorld * glm::vec4(cascadedShadowBounds[4 * i + 7], 1.0f);
+		worldShadowBounds[4 * i + 0] = cameraViewToWorld * glm::vec4(cascadedShadowBounds[4 * i + 0], 1.0f);
+		worldShadowBounds[4 * i + 1] = cameraViewToWorld * glm::vec4(cascadedShadowBounds[4 * i + 1], 1.0f);
+		worldShadowBounds[4 * i + 2] = cameraViewToWorld * glm::vec4(cascadedShadowBounds[4 * i + 2], 1.0f);
+		worldShadowBounds[4 * i + 3] = cameraViewToWorld * glm::vec4(cascadedShadowBounds[4 * i + 3], 1.0f);
+		worldShadowBounds[4 * i + 4] = cameraViewToWorld * glm::vec4(cascadedShadowBounds[4 * i + 4], 1.0f);
+		worldShadowBounds[4 * i + 5] = cameraViewToWorld * glm::vec4(cascadedShadowBounds[4 * i + 5], 1.0f);
+		worldShadowBounds[4 * i + 6] = cameraViewToWorld * glm::vec4(cascadedShadowBounds[4 * i + 6], 1.0f);
+		worldShadowBounds[4 * i + 7] = cameraViewToWorld * glm::vec4(cascadedShadowBounds[4 * i + 7], 1.0f);
 		glm::vec3 frustumCenter = glm::vec3(0.0f);
 		for (int j = 4 * i; j < ((4 * i) + 8); j++) {
-			frustumCenter += tempShadowBounds[j];
+			frustumCenter += worldShadowBounds[j];
 		}
 		frustumCenter /= 8.0f;
-
-		dirLightViews[i] = glm::lookAt(frustumCenter, frustumCenter - lightDir, glm::vec3(0.0f, 1.0f, 0.0f));
+		//placing view at center of bounding box helps reduce quantization errors
+		glm::mat4 dirLightView = glm::lookAt(frustumCenter, frustumCenter - lightDir, glm::vec3(0.0f, 1.0f, 0.0f));
 
 
 		GLfloat maxDistance =
 			std::max(
-				{ glm::length(frustumCenter - tempShadowBounds[4 * i + 0]), glm::length(frustumCenter - tempShadowBounds[4 * i + 4]),
-				 glm::length(frustumCenter - tempShadowBounds[4 * i + 1]), glm::length(frustumCenter - tempShadowBounds[4 * i + 1 + 4]),
-				 glm::length(frustumCenter - tempShadowBounds[4 * i + 2]), glm::length(frustumCenter - tempShadowBounds[4 * i + 2 + 4]),
-				 glm::length(frustumCenter - tempShadowBounds[4 * i + 3]), glm::length(frustumCenter - tempShadowBounds[4 * i + 3 + 4]) }
+				{ glm::length(frustumCenter - worldShadowBounds[4 * i + 0]), glm::length(frustumCenter - worldShadowBounds[4 * i + 4]),
+				 glm::length(frustumCenter - worldShadowBounds[4 * i + 1]), glm::length(frustumCenter - worldShadowBounds[4 * i + 1 + 4]),
+				 glm::length(frustumCenter - worldShadowBounds[4 * i + 2]), glm::length(frustumCenter - worldShadowBounds[4 * i + 2 + 4]),
+				 glm::length(frustumCenter - worldShadowBounds[4 * i + 3]), glm::length(frustumCenter - worldShadowBounds[4 * i + 3 + 4]) }
 		);
 
 
-
+		//displaying purposes for debugging
 		cascadedShadowBoxBounds[8 * i + 0] = frustumCenter + ((maxDistance)*glm::normalize(glm::vec3(-1, 1, 1)));
 		cascadedShadowBoxBounds[8 * i + 1] = frustumCenter + ((maxDistance)*glm::normalize(glm::vec3(1, 1, 1)));
 		cascadedShadowBoxBounds[8 * i + 2] = frustumCenter + ((maxDistance)*glm::normalize(glm::vec3(-1, -1, 1)));
@@ -529,21 +528,20 @@ void Renderer::renderTestSceneShadowMapCascades() {
 		cascadedShadowBoxBounds[8 * i + 6] = frustumCenter + ((maxDistance)*glm::normalize(glm::vec3(-1, -1, -1)));
 		cascadedShadowBoxBounds[8 * i + 7] = frustumCenter + ((maxDistance)*glm::normalize(glm::vec3(1, -1, -1)));
 
-		frustumCenter = dirLightViews[i] * glm::vec4(frustumCenter, 1.0f);
+		frustumCenter = dirLightView * glm::vec4(frustumCenter, 1.0f);
 
 		glm::mat4 cascadedOrtho = glm::ortho(frustumCenter.x - maxDistance, frustumCenter.x + maxDistance,
 			frustumCenter.y - maxDistance, frustumCenter.y + maxDistance,
 			frustumCenter.z - maxDistance, frustumCenter.z + maxDistance);
-
+		//reduce shimmering from moving camera
 		glm::vec4 arbitraryPoint(0.0f, 0.0f, 0.0f, 1.0f);
-		glm::vec4 arbitraryPointTexCoord = cascadedOrtho * dirLightViews[i] * arbitraryPoint;
+		glm::vec4 arbitraryPointTexCoord = cascadedOrtho * dirLightView * arbitraryPoint;
 		arbitraryPointTexCoord *= (directionalShadowWidth / 2.0f);
 		glm::vec4 shadowTexCoordOffset = glm::round(arbitraryPointTexCoord) - arbitraryPointTexCoord;
 		shadowTexCoordOffset *= (2.0f / directionalShadowWidth);
 		cascadedOrtho[3] += glm::vec4(shadowTexCoordOffset.x, shadowTexCoordOffset.y, 0.0f, 0.0f);
 
-		cascadedOrthos[i] = cascadedOrtho;
-		cascadedShadowMatrices[i] = cascadedOrtho * dirLightViews[i];
+		cascadedShadowMatrices[i] = cascadedOrtho * dirLightView;
 	}
 
 	glBindFramebuffer(GL_FRAMEBUFFER, cascadedShadowFramebufferID);
@@ -645,13 +643,10 @@ void Renderer::drawSkybox() {
 		glDepthFunc(GL_LEQUAL);
 		glBindVertexArray(cubeVAO);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
-		//glEnable(GL_POLYGON_OFFSET_FILL);
-		//glPolygonOffset(5.0, 5.0);
 		sunShader.useProgram();
 		glBindVertexArray(cubeVAO);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 		glBindVertexArray(0);
-		//glDisable(GL_POLYGON_OFFSET_FILL);
 		glDepthFunc(GL_LESS);
 		glBindVertexArray(0);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
