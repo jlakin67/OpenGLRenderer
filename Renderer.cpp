@@ -580,7 +580,6 @@ void Renderer::renderTestScenePointShadowMaps() {
 
 void Renderer::renderTestSceneLightingPass() {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
 	//separate lighting passes for deferred
 	glDisable(GL_DEPTH_TEST);
 	//ambient + directional pass
@@ -754,6 +753,7 @@ void Renderer::renderTestScene() {
 		fillShadowCascadeBuffer();
 		renderTestScenePointShadowMaps();
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
 		if (render_mode == RENDER_DEFAULT) {
 			renderTestSceneLightingPass();
 			drawMiscObjects();

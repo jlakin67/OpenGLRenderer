@@ -24,6 +24,11 @@ layout (std140, binding = 1) uniform Lights {
 	vec4 lightDirColor;
 };
 
+mat4 biasMatrix = mat4(vec4(0.5, 0.0, 0.0, 0.0),
+					   vec4(0.0, 0.5, 0.0, 0.0),
+					   vec4(0.0, 0.0, 0.5, 0.0),
+					   vec4(0.5, 0.5, 0.5, 1.0));
+
 float isShadow(samplerCubeArrayShadow shadowMaps, vec4 texCoord, float depth) {
 	float shadow = 1.0; 
 	if (depth > 1.0) return shadow;
@@ -31,7 +36,9 @@ float isShadow(samplerCubeArrayShadow shadowMaps, vec4 texCoord, float depth) {
 	return shadow;
 }
 
-float cascadedShadowCalculation(float viewDepth, vec4 worldPosition) {
+
+float cascadedShadowCalculation(float viewDepth, vec4 worldPosition, vec3 constantShadowTexCoordDx, 
+vec3 constantShadowTexCoordDy, float bias, vec2 filterStep) {
 	int shadowCascadeIndex = 0;
 	float shadowCascadeScale = 1.0f;
 	for (int i = 0; i < numShadowCascades; i++) {
@@ -40,31 +47,28 @@ float cascadedShadowCalculation(float viewDepth, vec4 worldPosition) {
 			shadowCascadeScale = (viewDepth - shadowSplitDepths[i])/(shadowSplitDepths[i+1] - shadowSplitDepths[i]);
 		}
 	}
-	
-	mat4 biasMatrix = mat4(vec4(0.5, 0.0, 0.0, 0.0),
-						   vec4(0.0, 0.5, 0.0, 0.0),
-						   vec4(0.0, 0.0, 0.5, 0.0),
-						   vec4(0.5, 0.5, 0.5, 1.0));
-	mat4 constantShadowCascadeMatrix = cascadedShadowMatrices[0];
+	 
 	mat4 shadowCascadeMatrix = cascadedShadowMatrices[shadowCascadeIndex];
 	vec4 shadowTextureCoordinate = biasMatrix*shadowCascadeMatrix*worldPosition;
-	vec4 constantShadowTexCoord =  biasMatrix*constantShadowCascadeMatrix*worldPosition;
-	float projectedDepth = constantShadowTexCoord.z;
-	float dfdx = dFdx(projectedDepth);
-	float dfdy = dFdy(projectedDepth);
-	float depthSlope = sqrt(dfdx*dfdx + dfdy*dfdy);
-	
-	//float depthSlope = 1.0f - max(dot(normalize(normal), lightDir), 0.0f);
-	float bias = 0.05*depthSlope + 0.005;
+	//mat2 screenToShadow = mat2(constantShadowTexCoordDx.st, constantShadowTexCoordDy.st);
+	//mat2 shadowToScreen = inverse(screenToShadow);
+	vec2 shadowTexelStep = 1.0f / vec2(textureSize(shadowCascades, 0).xy);
+	shadowTexelStep = filterStep*shadowTexelStep;
+	shadowTextureCoordinate.xy += shadowTexelStep;
+	//vec2 screenTexelStep = shadowToScreen*shadowTexelStep;
+	//float depthDelta = constantShadowTexCoordDx.z*screenTexelStep.x +
+	//constantShadowTexCoordDy.z * screenTexelStep.y;
 	//bias /= (shadowCascadeIndex*shadowCascadeIndex + 3.5f);
+	//shadowTextureCoordinate.z += abs(depthDelta);
 	shadowTextureCoordinate.z -= bias;
 	shadowTextureCoordinate.xyzw = shadowTextureCoordinate.xywz; //last component is depth reference for comparison
 	//second to last is the index into the texture array
 	shadowTextureCoordinate.z = shadowCascadeIndex;
 	float shadow = texture(shadowCascades, shadowTextureCoordinate);
-
-	float shadow2;
+	return shadow;
 	/*
+	float shadow2;
+	
 	if (shadowCascadeScale < 0.1f || shadowCascadeScale >= 0.9f) {
 		vec4 shadowTextureCoordinate2;
 		if (shadowCascadeIndex == numShadowCascades-1 && shadowCascadeScale >=0.5f) {
@@ -101,9 +105,8 @@ float cascadedShadowCalculation(float viewDepth, vec4 worldPosition) {
 			//return min(shadow, shadow2);
 			return (1.0f - shadowCascadeScale)*shadow + shadowCascadeScale*shadow2;
 		}
-	}
-	*/
-	return shadow;
+	} else return shadow;
+
 	/*
 	if (kernelOffset < 1) {
 		float shadow = texture(shadowCascades, shadowTextureCoordinate);
@@ -127,6 +130,36 @@ float cascadedShadowCalculation(float viewDepth, vec4 worldPosition) {
 	}
 	*/
 }
+
+float cascadedShadowCalculationPCF(float viewDepth, vec4 worldPosition, int kernelOffset) {
+	float shadow = 1.0f;
+
+	mat4 constantShadowCascadeMatrix = cascadedShadowMatrices[numShadowCascades-1];
+	vec4 constantShadowTexCoord =  biasMatrix*constantShadowCascadeMatrix*worldPosition;
+	vec3 constantShadowTexCoordDx = dFdx(constantShadowTexCoord.xyz);
+	vec3 constantShadowTexCoordDy = dFdy(constantShadowTexCoord.xyz);
+	float depthDx = constantShadowTexCoordDx.z;
+	float depthDy = constantShadowTexCoordDy.z;
+	float depthSlope = sqrt(depthDx*depthDx + depthDy*depthDy);
+	float bias = 0.05*depthSlope + 0.005;
+
+	if (kernelOffset < 1) {
+		shadow = cascadedShadowCalculation(viewDepth, worldPosition, constantShadowTexCoordDx, constantShadowTexCoordDy, bias, vec2(0.0f, 0.0f));
+	} else {
+		int kernelWidth = 1 + 2*kernelOffset;
+		shadow = 0.0f;
+		for (int i = -kernelOffset; i <= kernelOffset; i++) {
+			for (int j = -kernelOffset; j <= kernelOffset; j++) {
+				shadow += cascadedShadowCalculation(viewDepth, worldPosition, constantShadowTexCoordDx, constantShadowTexCoordDy, bias, vec2(i, j));
+			}
+		}
+		shadow /= float(kernelWidth*kernelWidth);
+		
+	}
+
+	return shadow;
+}
+
 
 void main() {
 	vec4 position = texture(gPosition, texCoord);
@@ -154,7 +187,7 @@ void main() {
 	if (containsShadow) {
 		//cascaded shadow calculation
 		float shadow = 1.0;
-		finalColor -= (1 - vec3(cascadedShadowCalculation(viewDepth, position)));
+		finalColor -= (1 - vec3(cascadedShadowCalculationPCF(viewDepth, position, 0)));
 	}
 	FragColor = vec4(finalColor, 1.0);
 }
