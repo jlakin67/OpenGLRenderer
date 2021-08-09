@@ -141,6 +141,13 @@ private:
 	Shader quadShader;
 	void setupDeferredFramebuffer();
 
+	//gamma correction, tone mapping, anti-aliasing
+	GLuint postprocessFramebufferID = 0;
+	GLuint postprocessColorTextureID = 0;
+	GLuint postprocessRenderbufferID = 0;
+	Shader postprocessShader;
+	void setupPostprocessFramebuffer();
+
 	Shader lightDisplayShader;
 	void setupLightDisplay();
 

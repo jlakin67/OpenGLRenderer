@@ -84,7 +84,7 @@ void Model::loadTexture(aiTextureType type, Mesh& mesh, const aiScene* scene, un
                 glGenTextures(1, &id);
                 texture.id = id;
                 glBindTexture(GL_TEXTURE_2D, id);
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, textureWidth, textureHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB8_ALPHA8, textureWidth, textureHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
                 stbi_image_free(image);
                 glGenerateMipmap(GL_TEXTURE_2D);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);

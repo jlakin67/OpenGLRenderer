@@ -108,7 +108,7 @@ void Renderer::setupSkybox() {
 			std::cout << "Error::Cubemap - Could not load face at path " << paths.at(i) << "\n";
 			exit(EXIT_FAILURE);
 		}
-		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, skyboxImageWidth,
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_SRGB8, skyboxImageWidth,
 			skyboxImageHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, imagePtr);
 		stbi_image_free(imagePtr);
 		imagePtr = nullptr;
@@ -374,7 +374,7 @@ void Renderer::setupDeferredFramebuffer() {
 	glBindRenderbuffer(GL_RENDERBUFFER, 0);
 	glDrawBuffers(deferredAttachments.size(), &deferredAttachments[0]);
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-		std::cout << "ERROR::FRAMEBUFFER: Framebuffer is not complete!" << std::endl;
+		std::cout << "ERROR::FRAMEBUFFER: Deferred framebuffer is not complete!" << std::endl;
 		exit(EXIT_FAILURE);
 	}
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -408,18 +408,46 @@ void Renderer::setupSunDisplay() {
 void Renderer::setupTestSceneLights() {
 	lightPos.push_back(glm::vec4(3.0, 3.0, 3.0, 1.0));
 	lightPos.push_back(glm::vec4(0.0, 3.0, -1.0, 1.0));
-	lightColor.push_back(glm::vec4(1.0, 1.0, 1.0, 1.0));
-	lightColor.push_back(glm::vec4(1.0, 1.0, 1.0, 1.0));
+	lightColor.push_back(glm::vec4(0.6, 0.6, 0.6, 1.0));
+	lightColor.push_back(glm::vec4(0.3, 0.3, 0.3, 1.0));
 	lightParam.push_back(glm::vec4(lightConstant, lightLinear, lightQuadratic, specularExponent));
 	lightParam.push_back(glm::vec4(lightConstant, lightLinear, lightQuadratic, specularExponent));
 	lightDir = glm::vec4(cos(Renderer::lightDirTheta) * cos(Renderer::lightDirPhi),
 		sin(Renderer::lightDirTheta),
 		-sin(Renderer::lightDirPhi) * cos(Renderer::lightDirTheta),
 		0.0f);
-	lightDirColor = glm::vec4(0.3f, 0.3f, 0.3f, 1.0f);
+	lightDirColor = glm::vec4(0.001f, 0.001f, 0.001f, 1.0f);
 	setupLightVolumes();
 }
 
+
+void Renderer::setupPostprocessFramebuffer()
+{
+	glGenFramebuffers(1, &postprocessFramebufferID);
+	glBindFramebuffer(GL_FRAMEBUFFER, postprocessFramebufferID);
+	glGenTextures(1, &postprocessColorTextureID);
+	glBindTexture(GL_TEXTURE_2D, postprocessColorTextureID);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, postprocessColorTextureID, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glGenRenderbuffers(1, &postprocessRenderbufferID);
+	glBindRenderbuffer(GL_RENDERBUFFER, postprocessRenderbufferID);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCR_WIDTH, SCR_HEIGHT);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, postprocessRenderbufferID);
+	glBindRenderbuffer(GL_RENDERBUFFER, 0);
+	glDrawBuffer(GL_COLOR_ATTACHMENT0);
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+		std::cout << "ERROR::FRAMEBUFFER: Postprocess framebuffer is not complete!" << std::endl;
+		exit(EXIT_FAILURE);
+	}
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	postprocessShader.loadFile("Shaders/Quad_framebuffer.vert", "Shaders/Postprocess.frag");
+	postprocessShader.useProgram();
+	postprocessShader.setInt("screen", 0);
+	glUseProgram(0);
+}
 
 void Renderer::setupShadowTesting() {
 	shadowCascadeTest.setupBuffer(numShadowCascades);
@@ -479,7 +507,7 @@ void Renderer::setupTestScenePlane() {
 	}
 	glGenTextures(1, &planeTextureID);
 	glBindTexture(GL_TEXTURE_2D, planeTextureID);
-	glTexImage2D(GL_TEXTURE_2D, 0, (planeTextureChannels == 4) ? GL_RGBA : GL_RGB, planeTextureWidth,
+	glTexImage2D(GL_TEXTURE_2D, 0, (planeTextureChannels == 4) ? GL_SRGB8_ALPHA8 : GL_SRGB8, planeTextureWidth,
 		planeTextureHeight, 0, (planeTextureChannels == 4) ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, imagePtr);
 	stbi_image_free(imagePtr); imagePtr = nullptr;
 	glGenerateMipmap(GL_TEXTURE_2D);
@@ -612,7 +640,7 @@ void Renderer::renderTestScenePointShadowMaps() {
 }
 
 void Renderer::renderTestSceneLightingPass() {
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, postprocessFramebufferID);
 	//separate lighting passes for deferred
 	glDisable(GL_DEPTH_TEST);
 	//ambient + directional pass
@@ -750,6 +778,7 @@ void Renderer::setupTestScene() {
 	setupDirectionalLightShader();
 	setupPointShadowMaps();
 	setupDeferredFramebuffer();
+	setupPostprocessFramebuffer();
 	setupTestAxis();
 	setupLightDisplay();
 	setupShadowTesting();
@@ -791,9 +820,24 @@ void Renderer::renderTestScene() {
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
 		if (render_mode == RENDER_DEFAULT) {
+			glBindFramebuffer(GL_FRAMEBUFFER, postprocessFramebufferID);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
 			renderTestSceneLightingPass();
 			drawMiscObjects();
 			if (frustum_outline_mode != NO_FRUSTUM_OUTLINE) drawFrustums();
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			glEnable(GL_FRAMEBUFFER_SRGB);
+			glDisable(GL_DEPTH_TEST);
+			postprocessShader.useProgram();
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, postprocessColorTextureID);
+			glBindVertexArray(quadVAO);
+			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+			glBindVertexArray(0);
+			glEnable(GL_DEPTH_TEST);
+			glBindTexture(GL_TEXTURE_2D, 0);
+			glDisable(GL_FRAMEBUFFER_SRGB);
 		}
 		else if (render_mode == RENDER_SHADOW) {
 			glDisable(GL_DEPTH_TEST);

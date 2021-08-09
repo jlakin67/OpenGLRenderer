@@ -186,6 +186,7 @@
     <ClInclude Include="util.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Postprocess.frag" />
     <None Include="Shaders\Axis.frag" />
     <None Include="Shaders\Axis.vert" />
     <None Include="Shaders\CascadeFrustum.frag" />
