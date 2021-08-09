@@ -1,7 +1,7 @@
 #include "Renderer.h"
 
 void Renderer::setupUniformBuffers() {
-	glGenBuffers(3, uboIDs);
+	glGenBuffers(NUM_UBO_NAMES, uboIDs);
 	glBindBuffer(GL_UNIFORM_BUFFER, uboIDs[UBO_MATRICES]);
 	glBufferData(GL_UNIFORM_BUFFER, sizeof(MatricesUniformBlock), NULL, GL_DYNAMIC_DRAW);
 	projection = glm::perspective(glm::radians(ZOOM), aspectRatio, near, far);
@@ -37,6 +37,12 @@ void Renderer::setupUniformBuffers() {
 	glBindBuffer(GL_UNIFORM_BUFFER, uboIDs[UBO_SHADOW_MATRICES]);
 	glBufferData(GL_UNIFORM_BUFFER, sizeof(ShadowUniformBlock), NULL, GL_STATIC_DRAW);
 	glBindBufferBase(GL_UNIFORM_BUFFER, 2, uboIDs[UBO_SHADOW_MATRICES]);
+	glBindBuffer(GL_UNIFORM_BUFFER, uboIDs[UBO_SAMPLES]);
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(SamplesBlock), NULL, GL_STATIC_DRAW);
+	glBufferSubData(GL_UNIFORM_BUFFER, offsetof(SamplesBlock, poissonDisk), sizeof(poissonDisk), poissonDisk);
+	glBufferSubData(GL_UNIFORM_BUFFER, offsetof(SamplesBlock, poissonDiskSphere), sizeof(poissonDiskDir), poissonDiskDir);
+	glBufferSubData(GL_UNIFORM_BUFFER, offsetof(SamplesBlock, poissonDiskHemisphere), sizeof(poissonDiskDirHemi), poissonDiskDirHemi);
+	glBindBufferBase(GL_UNIFORM_BUFFER, 3, uboIDs[UBO_SAMPLES]);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
@@ -157,6 +163,7 @@ void Renderer::setupLightVolumes() {
 	lightVolumeShader.setInt("gNormal", 1);
 	lightVolumeShader.setInt("gAlbedoSpec", 2);
 	lightVolumeShader.setInt("shadowMaps", 3);
+	lightVolumeShader.setInt("noise", 4);
 	lightVolumeShader.setBool("containsShadow", true);
 	lightVolumeShader.setFloat("shadowFar", shadow_far);
 	lightVolumeShader.setFloat("ambientStrength", ambientStrength);
@@ -298,6 +305,31 @@ void Renderer::setupPointShadowMaps() {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
+void generateRandom3DTexture(float* arr, size_t len, float a, float b) {
+	//auto seed = std::chrono::system_clock::now().time_since_epoch().count();
+	int seed = 984243;
+	std::default_random_engine engine(seed);
+	std::uniform_real_distribution<float> distribution(a, b);
+	for (int i = 0; i < len * len * len; i++) {
+		arr[i] = distribution(engine);
+	}
+}
+
+void Renderer::setupRandomTexture()
+{ //map world position to random angle so there is stability between frames
+	generateRandom3DTexture(randomAngleTexture, randomTextureSize, 0.0f, 2 * pi);
+	glGenTextures(1, &randomTextureID);
+	glBindTexture(GL_TEXTURE_3D, randomTextureID);
+	glTexImage3D(GL_TEXTURE_3D, 0, GL_R16F, randomTextureSize, randomTextureSize, randomTextureSize, 0,
+		GL_RED, GL_FLOAT, randomAngleTexture);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_REPEAT);
+	glBindTexture(GL_TEXTURE_3D, 0);
+}
+
 
 
 
@@ -384,7 +416,7 @@ void Renderer::setupTestSceneLights() {
 		sin(Renderer::lightDirTheta),
 		-sin(Renderer::lightDirPhi) * cos(Renderer::lightDirTheta),
 		0.0f);
-	lightDirColor = glm::vec4(0.7f, 0.7f, 0.7f, 1.0f);
+	lightDirColor = glm::vec4(0.3f, 0.3f, 0.3f, 1.0f);
 	setupLightVolumes();
 }
 
@@ -406,6 +438,7 @@ void Renderer::setupShadowTesting() {
 	shadowCascadeTestShader.loadFile("Shaders/CascadeFrustum.vert", "Shaders/CascadeFrustum.frag");
 	shadowCascadeTestShader.useProgram();
 	shadowCascadeTestShader.setInt("gNormal", 4);
+	shadowCascadeTestShader.setInt("noise", 5);
 	glGenTextures(1, &omniShadowMapViewID);
 	glTextureView(omniShadowMapViewID, GL_TEXTURE_CUBE_MAP, shadowCubemapArrayID, GL_DEPTH_COMPONENT24,
 		0, 1, 0, 6);
@@ -607,6 +640,8 @@ void Renderer::renderTestSceneLightingPass() {
 	glCullFace(GL_BACK);
 	glActiveTexture(GL_TEXTURE3);
 	glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, shadowCubemapArrayID);
+	glActiveTexture(GL_TEXTURE4);
+	glBindTexture(GL_TEXTURE_3D, randomTextureID);
 	glBindVertexArray(cubeVAO);
 	glDrawArraysInstanced(GL_TRIANGLES, 0, 36, numPointLights);
 	glBindVertexArray(0);
@@ -709,6 +744,7 @@ void Renderer::setupTestScene() {
 	setupTestSceneModel();
 	setupTestScenePlane();
 	setupUniformBuffers();
+	setupRandomTexture();
 	setupSkybox();
 	setupCascadedShadowMaps();
 	setupDirectionalLightShader();
@@ -774,6 +810,8 @@ void Renderer::renderTestScene() {
 			glBindTexture(GL_TEXTURE_2D_ARRAY, cascadedShadowTextureArrayID);
 			glActiveTexture(GL_TEXTURE4);
 			glBindTexture(GL_TEXTURE_2D, deferredColorTextureIDs.at(2));
+			glActiveTexture(GL_TEXTURE5);
+			glBindTexture(GL_TEXTURE_3D, randomTextureID);
 			glBindVertexArray(quadVAO);
 			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 			glBindVertexArray(0);
@@ -784,6 +822,7 @@ void Renderer::renderTestScene() {
 				GL_DEPTH_BUFFER_BIT, GL_NEAREST
 			);
 			testAxis.draw();
+			glActiveTexture(GL_TEXTURE0);
 		}
 		else if (render_mode == RENDER_POSITION) {
 			glDisable(GL_DEPTH_TEST);

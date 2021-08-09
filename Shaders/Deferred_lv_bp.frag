@@ -1,5 +1,8 @@
 #version 430 core
 
+#define ONE_OVER_TWO_PI 0.1591549f
+#define MAX_POINT_LIGHT_DISK_RADIUS 0.1f
+
 //with light volumes, blinn phong
 
 out vec4 FragColor;
@@ -15,6 +18,8 @@ uniform vec2 windowSize = vec2(1600, 900);
 flat in int instanceID;
 flat in mat4 light_model;
 
+uniform sampler3D noise;
+
 layout (std140, binding = 1) uniform Lights {
 	int numLights;
 	vec3 cameraPos;
@@ -24,6 +29,12 @@ layout (std140, binding = 1) uniform Lights {
 	vec3 lightDir;
 	vec4 lightDirColor;
 };
+
+layout (std140, binding = 3) uniform Samples {
+	vec2 poissonDisk[81]; //.1 disk radius, between 0 and 1
+	vec3 poissonDiskSphere[81]; //.05 disk radius
+	vec3 poissonDiskHemisphere[81]; //.025 disk radius
+}; 
 
 vec3 pointLightShading(vec3 lightPos, vec4 lightColor, vec4 diffuseColor, vec3 normal, 
 float specularStrength, vec3 position, vec4 param) {
@@ -51,6 +62,22 @@ float isShadow(samplerCubeArrayShadow shadowMaps, vec4 texCoord, float depth) {
 	return shadow;
 }
 
+float pointLightPoissonDisk(samplerCubeArrayShadow shadowMaps, vec4 shadowTexCoord, float depth, float diskRadius, int numSamples, vec4 worldPosition) {
+	float shadow = 0.0f;
+
+	for (int i = 0; i < numSamples; i++) {
+			vec2 randomAngle = texture(noise, worldPosition.xyz).xy;
+			vec3 jitter = vec3(cos(randomAngle.x)*sin(randomAngle.y),
+							   sin(randomAngle.x)*sin(randomAngle.y),
+							   (randomAngle.y)
+							  );
+			shadow +=
+			isShadow(shadowMaps, vec4(shadowTexCoord.xyz + diskRadius*length(poissonDisk[i])*(poissonDiskSphere[i] + jitter), shadowTexCoord.w), depth);
+	}
+	shadow /= float(numSamples);
+	return shadow;
+}
+
 void main() {
 	vec2 texCoord = vec2(gl_FragCoord.x/windowSize.x, gl_FragCoord.y/windowSize.y);
 	
@@ -65,12 +92,16 @@ void main() {
 	float shadow = 1.0;
 	if (containsShadow) {
 		vec4 shadowTexCoord = vec4(position.xyz - lightPos[instanceID].xyz, instanceID);
-			float depth = length(shadowTexCoord.xyz) / shadowFar;
-			float dfdx = dFdx(depth);
-			float dfdy = dFdy(depth);
-			float depthSlope = sqrt(dfdx*dfdx + dfdy*dfdy);
-			float bias = 0.01*depthSlope + 0.015;
-		shadow = isShadow(shadowMaps, shadowTexCoord, depth-bias);
+		float depth = length(shadowTexCoord.xyz) / shadowFar;
+		float dfdx = dFdx(depth);
+		float dfdy = dFdy(depth);
+		float depthSlope = sqrt(dfdx*dfdx + dfdy*dfdy);
+		float bias = 0.01*depthSlope + 0.015;
+		float diskRadius = 0.04f;
+		diskRadius = clamp(diskRadius, 0.0f, MAX_POINT_LIGHT_DISK_RADIUS);
+		int numSamples = int(mix(1, 81, pow( (diskRadius/MAX_POINT_LIGHT_DISK_RADIUS), 1.0f/2.2f) ));
+		bias += 0.75*diskRadius;
+		shadow = pointLightPoissonDisk(shadowMaps, shadowTexCoord, depth-bias, diskRadius, numSamples, position);
 	}
 	vec4 param = lightParam[instanceID];
 	finalColor += shadow*pointLightShading(lightPos[instanceID].xyz, lightColor[instanceID], diffuse, 

@@ -3,6 +3,8 @@
 #include "Axis.h"
 #include "Model.h"
 #include "Renderer_constants.h"
+#include <chrono>
+#include <random>
 
 extern Camera camera;
 extern Camera cameraAlt;
@@ -14,7 +16,6 @@ struct MatricesUniformBlock {
 	GLfloat infiniteProj[4 * 4];
 };
 
-//padding made explicit
 struct LightsUniformBlock {
 	GLint numLights[4]; //int
 	GLfloat cameraPos[4]; //vec3
@@ -27,6 +28,12 @@ struct LightsUniformBlock {
 
 struct ShadowUniformBlock {
 	GLfloat shadowMatrices[4 * 4 * 6 * maxShadowedPointLights];
+};
+
+struct SamplesBlock {
+	GLfloat poissonDisk[4 * maxSamples]; //vec2[81]
+	GLfloat poissonDiskSphere[4 * maxSamples]; //vec3[81]
+	GLfloat poissonDiskHemisphere[4 * maxSamples]; //vec3[81]
 };
 
 class ShadowCascadeTest {
@@ -87,7 +94,7 @@ private:
 
 	static Renderer* instance;
 
-	enum UBONames { UBO_MATRICES, UBO_LIGHTS, UBO_SHADOW_MATRICES, NUM_UBO_NAMES };
+	enum UBONames { UBO_MATRICES, UBO_LIGHTS, UBO_SHADOW_MATRICES, UBO_SAMPLES, NUM_UBO_NAMES };
 	GLuint uboIDs[NUM_UBO_NAMES];
 	void setupUniformBuffers();
 
@@ -122,10 +129,13 @@ private:
 	std::vector<glm::mat4> shadowMatrices;
 	void setupPointShadowMaps();
 
+	GLuint randomTextureID = 0;
+	void setupRandomTexture();
+
 	GLuint deferredFramebufferID = 0;
 	GLint deferredFramebufferWidth = SCR_WIDTH, deferredFramebufferHeight = SCR_HEIGHT;
-	std::vector<GLint> deferredAttachmentFormats{ GL_R32F, GL_RGBA16F, GL_RGBA16F, GL_RGBA16F };
-	std::vector<GLuint> deferredAttachments; //0 = depth, 1 = position, 2 = normal, 3 = albedoSpec
+	std::vector<GLint> deferredAttachmentFormats{ GL_R32F, GL_RGBA16F, GL_RGBA16F, GL_RGBA16F, GL_R16F};
+	std::vector<GLuint> deferredAttachments; //0 = depth, 1 = position, 2 = normal, 3 = albedoSpec, 4 = ambient occlusion
 	std::vector<GLuint> deferredColorTextureIDs;
 	GLuint deferredDepthRenderbufferID = 0;
 	Shader quadShader;
