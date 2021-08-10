@@ -8,11 +8,11 @@
 
 extern GLFWwindow* window;
 extern const char* glsl_version;
+extern bool windowHovered;
 
 namespace UI {
 	void initialize();
 	void showDemoWindow();
 	void renderUI();
 	extern bool show_ui;
-	inline bool isWindowHovered() { return ImGui::IsWindowHovered(); }
 }

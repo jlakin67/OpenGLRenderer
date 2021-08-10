@@ -250,7 +250,7 @@
     <None Include="Shaders\Wireframe.vert">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="Postprocess.frag">
+    <None Include="Shaders\Postprocess.frag">
       <Filter>Shaders</Filter>
     </None>
   </ItemGroup>

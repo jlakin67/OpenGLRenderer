@@ -35,7 +35,7 @@ void Renderer::setupUniformBuffers() {
 		sizeof(glm::vec4), glm::value_ptr(lightDirColor));
 	glBindBufferBase(GL_UNIFORM_BUFFER, 1, uboIDs[UBO_LIGHTS]);
 	glBindBuffer(GL_UNIFORM_BUFFER, uboIDs[UBO_SHADOW_MATRICES]);
-	glBufferData(GL_UNIFORM_BUFFER, sizeof(ShadowUniformBlock), NULL, GL_STATIC_DRAW);
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(ShadowUniformBlock), NULL, GL_DYNAMIC_DRAW);
 	glBindBufferBase(GL_UNIFORM_BUFFER, 2, uboIDs[UBO_SHADOW_MATRICES]);
 	glBindBuffer(GL_UNIFORM_BUFFER, uboIDs[UBO_SAMPLES]);
 	glBufferData(GL_UNIFORM_BUFFER, sizeof(SamplesBlock), NULL, GL_STATIC_DRAW);
@@ -124,7 +124,6 @@ void Renderer::setupSkybox() {
 
 void Renderer::setupLightVolumes() {
 	glBindVertexArray(cubeVAO);
-	GLuint lightVolumeModelBufID = 0;
 	glGenBuffers(1, &lightVolumeModelBufID);
 	glBindBuffer(GL_ARRAY_BUFFER, lightVolumeModelBufID);
 	std::vector<glm::mat4> models;
@@ -142,7 +141,7 @@ void Renderer::setupLightVolumes() {
 		models.push_back(model);
 	}
 	glBufferData(GL_ARRAY_BUFFER, models.size() * sizeof(glm::mat4), glm::value_ptr(models[0])
-		, GL_STATIC_DRAW);
+		, GL_DYNAMIC_DRAW);
 	glEnableVertexAttribArray(5);
 	glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)0);
 	glEnableVertexAttribArray(6);
@@ -284,7 +283,6 @@ void Renderer::setupPointShadowMaps() {
 	shadowMapShader.useProgram();
 	shadowMapShader.setFloat("shadowFar", shadow_far);
 	shadowMapShader.setInt("numShadowedLights", numPointLights);
-	//non-moving light for now
 	for (int i = 0; i < numPointLights; i++) {
 		shadowMatrices.push_back(shadowProj *
 			glm::lookAt(glm::vec3(lightPos.at(i)), glm::vec3(lightPos.at(i)) + glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
@@ -388,11 +386,10 @@ void Renderer::setupLightDisplay() {
 	lightDisplayShader.setBool("instanced", true);
 	glm::mat4 lightDisplayModel = glm::scale(glm::mat4(1.0f), glm::vec3(0.01, 0.01, 0.01));
 	lightDisplayShader.setMat4("model", glm::value_ptr(lightDisplayModel));
-	GLuint lightDisplayPositionBufID = 0;
 	glGenBuffers(1, &lightDisplayPositionBufID);
 	glBindBuffer(GL_ARRAY_BUFFER, lightDisplayPositionBufID);
 	glBufferData(GL_ARRAY_BUFFER, lightPos.size() * sizeof(glm::vec4),
-		glm::value_ptr(lightPos[0]), GL_STATIC_DRAW);
+		glm::value_ptr(lightPos[0]), GL_DYNAMIC_DRAW);
 	glEnableVertexAttribArray(9);
 	glVertexAttribPointer(9, 4, GL_FLOAT, GL_FALSE, sizeof(glm::vec4), (void*)0);
 	glVertexAttribDivisor(9, 1);
@@ -412,9 +409,9 @@ void Renderer::setupTestSceneLights() {
 	lightColor.push_back(glm::vec4(0.3, 0.3, 0.3, 1.0));
 	lightParam.push_back(glm::vec4(lightConstant, lightLinear, lightQuadratic, specularExponent));
 	lightParam.push_back(glm::vec4(lightConstant, lightLinear, lightQuadratic, specularExponent));
-	lightDir = glm::vec4(cos(Renderer::lightDirTheta) * cos(Renderer::lightDirPhi),
-		sin(Renderer::lightDirTheta),
-		-sin(Renderer::lightDirPhi) * cos(Renderer::lightDirTheta),
+	lightDir = glm::vec4(cos(lightDirTheta) * cos(lightDirPhi),
+		sin(lightDirTheta),
+		-sin(lightDirPhi) * cos(lightDirTheta),
 		0.0f);
 	lightDirColor = glm::vec4(0.001f, 0.001f, 0.001f, 1.0f);
 	setupLightVolumes();
@@ -665,7 +662,7 @@ void Renderer::renderTestSceneLightingPass() {
 	glBlendFunc(GL_ONE, GL_ONE);
 	lightVolumeShader.useProgram();
 	glEnable(GL_CULL_FACE);
-	glCullFace(GL_BACK);
+	glCullFace(GL_BACK); //cube has clockwise winding
 	glActiveTexture(GL_TEXTURE3);
 	glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, shadowCubemapArrayID);
 	glActiveTexture(GL_TEXTURE4);
@@ -762,6 +759,64 @@ void Renderer::updateViewUniformBuffer(glm::mat4& viewMatrix) {
 	glm::vec4 paddedCameraPos = glm::vec4(camera.pos, 1.0f);
 	glBufferSubData(GL_UNIFORM_BUFFER, offsetof(LightsUniformBlock, cameraPos),
 		sizeof(glm::vec4), glm::value_ptr(paddedCameraPos));
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+}
+
+void Renderer::updatePointLight(int index, glm::vec4* position, glm::vec4* color, glm::vec4* param)
+{
+	if (position) lightPos.at(index) = *position;
+	if (color) lightColor.at(index) = *color;
+	if (param) lightParam.at(index) = *param;
+	glBindBuffer(GL_UNIFORM_BUFFER, uboIDs[UBO_LIGHTS]);
+	if (position) glBufferSubData(GL_UNIFORM_BUFFER, offsetof(LightsUniformBlock, lightPos) + index * sizeof(glm::vec4),
+		sizeof(glm::vec4), glm::value_ptr(*position));
+	if (color) 	glBufferSubData(GL_UNIFORM_BUFFER, offsetof(LightsUniformBlock, lightColor) + index * sizeof(glm::vec4),
+		sizeof(glm::vec4), glm::value_ptr(*color));
+	if (param) 	glBufferSubData(GL_UNIFORM_BUFFER, offsetof(LightsUniformBlock, lightParam) + index * sizeof(glm::vec4),
+		sizeof(glm::vec4), glm::value_ptr(*param));
+	glm::mat4 lightVolumeModel(1.0f);
+	lightVolumeModel = glm::translate(lightVolumeModel, glm::vec3(lightPos.at(index)));
+	glm::vec4 lightModelColor = lightColor.at(index);
+	float lightMax = std::max({ lightModelColor.r, lightModelColor.g, lightModelColor.b });
+	float constant = lightParam.at(index).x;
+	float linear = lightParam.at(index).y;
+	float quadratic = lightParam.at(index).z;
+	float radius =
+		(-linear + std::sqrtf(linear * linear - 4.0f * quadratic * (constant - (256.0f / 5.0f) * lightMax)))
+		/ (2.0f * quadratic);
+	lightVolumeModel = glm::scale(lightVolumeModel, glm::vec3(radius));
+	glBindBuffer(GL_ARRAY_BUFFER, lightVolumeModelBufID);
+	glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(glm::mat4), sizeof(glm::mat4), glm::value_ptr(lightVolumeModel));
+	if (position) {
+		glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), shadow_aspect, shadow_near, shadow_far);
+		shadowMatrices.at(6 * index) = (shadowProj *
+			glm::lookAt(glm::vec3(lightPos.at(index)), glm::vec3(lightPos.at(index)) + glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
+		shadowMatrices.at(6 * index + 1) = (shadowProj *
+			glm::lookAt(glm::vec3(lightPos.at(index)), glm::vec3(lightPos.at(index)) + glm::vec3(-1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
+		shadowMatrices.at(6 * index + 2) = (shadowProj *
+			glm::lookAt(glm::vec3(lightPos.at(index)), glm::vec3(lightPos.at(index)) + glm::vec3(0.0, 1.0, 0.0), glm::vec3(0.0, 0.0, 1.0)));
+		shadowMatrices.at(6 * index + 3) = (shadowProj *
+			glm::lookAt(glm::vec3(lightPos.at(index)), glm::vec3(lightPos.at(index)) + glm::vec3(0.0, -1.0, 0.0), glm::vec3(0.0, 0.0, -1.0)));
+		shadowMatrices.at(6 * index + 4) = (shadowProj *
+			glm::lookAt(glm::vec3(lightPos.at(index)), glm::vec3(lightPos.at(index)) + glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, -1.0, 0.0)));
+		shadowMatrices.at(6 * index + 5) = (shadowProj *
+			glm::lookAt(glm::vec3(lightPos.at(index)), glm::vec3(lightPos.at(index)) + glm::vec3(0.0, 0.0, -1.0), glm::vec3(0.0, -1.0, 0.0)));
+		glBindBuffer(GL_UNIFORM_BUFFER, uboIDs[UBO_SHADOW_MATRICES]);
+		glBufferSubData(GL_UNIFORM_BUFFER, 6 * index * sizeof(glm::mat4), 6 * sizeof(glm::mat4), glm::value_ptr(shadowMatrices[6 * index]));
+		glBindBuffer(GL_UNIFORM_BUFFER, 0);
+		glBindBuffer(GL_ARRAY_BUFFER, lightDisplayPositionBufID);
+		glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(glm::vec4), sizeof(glm::vec4), glm::value_ptr(*position));
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+	}
+}
+
+void Renderer::updateDirectionalLight(glm::vec4* newLightDir, glm::vec4* newLightDirColor)
+{
+	if (newLightDir) lightDir = *newLightDir;
+	if (newLightDirColor) lightDirColor = *newLightDirColor;
+	glBindBuffer(GL_UNIFORM_BUFFER, uboIDs[UBO_LIGHTS]);
+	glBufferSubData(GL_UNIFORM_BUFFER, offsetof(LightsUniformBlock, lightDir), sizeof(glm::vec4), glm::value_ptr(lightDir));
+	glBufferSubData(GL_UNIFORM_BUFFER, offsetof(LightsUniformBlock, lightDirColor), sizeof(glm::vec4), glm::value_ptr(lightDirColor));
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
@@ -931,8 +986,6 @@ int Renderer::frustum_outline_mode = Renderer::NO_FRUSTUM_OUTLINE;
 int Renderer::cameraMode = 0;
 
 int Renderer::numPointLights = 2;
-float Renderer::lightDirTheta = glm::radians(45.0f); //zenith angle, measured from x-y axis, where positive y axis points 90 degrees
-float Renderer::lightDirPhi = glm::radians(-90.0f); //azimuth angle, counterclockwise, where positive x axis points 0 degrees
 glm::vec4 Renderer::lightDirColor;
 glm::vec3 Renderer::lightDir;
 std::vector<glm::vec4> Renderer::lightPos;

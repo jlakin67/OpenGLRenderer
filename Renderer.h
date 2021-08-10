@@ -57,6 +57,9 @@ public:
 	static Renderer* getInstance();
 
 	void updateViewUniformBuffer(glm::mat4& viewMatrix);
+	void updatePointLight(int index, glm::vec4* position, glm::vec4* color, glm::vec4* param);
+	void updateDirectionalLight(glm::vec4* newLightDir, glm::vec4* newLightDirColor);
+
 	//debug scene used for previous versions of this code
 	void setupTestScene();
 	void renderTestScene();
@@ -67,8 +70,6 @@ public:
 	static glm::mat4 infiniteProj;
 
 	static int numPointLights;
-	static float lightDirTheta; //zenith angle, measured from x-y axis, where positive y axis points 90 degrees
-	static float lightDirPhi; //azimuth angle, counterclockwise, where positive x axis points 0 degrees
 	static glm::vec3 lightDir;
 	static glm::vec4 lightDirColor;
 	static std::vector<glm::vec4> lightPos;
@@ -110,6 +111,7 @@ private:
 	void setupSkybox();
 
 	Shader lightVolumeShader;
+	GLuint lightVolumeModelBufID = 0;
 	void setupLightVolumes();
 
 	GLuint cascadedShadowFramebufferID = 0;
@@ -149,6 +151,7 @@ private:
 	void setupPostprocessFramebuffer();
 
 	Shader lightDisplayShader;
+	GLuint lightDisplayPositionBufID = 0;
 	void setupLightDisplay();
 
 	Shader sunShader;

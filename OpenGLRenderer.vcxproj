@@ -186,7 +186,6 @@
     <ClInclude Include="util.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Postprocess.frag" />
     <None Include="Shaders\Axis.frag" />
     <None Include="Shaders\Axis.vert" />
     <None Include="Shaders\CascadeFrustum.frag" />
@@ -204,6 +203,7 @@
     <None Include="Shaders\Model_blinn_phong.frag" />
     <None Include="Shaders\Model_blinn_phong_deferred.frag" />
     <None Include="Shaders\Model_blinn_phong_forward.frag" />
+    <None Include="Shaders\Postprocess.frag" />
     <None Include="Shaders\Quad.frag" />
     <None Include="Shaders\Quad.vert" />
     <None Include="Shaders\Quad_deferred.frag" />

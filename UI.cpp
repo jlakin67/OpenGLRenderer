@@ -1,5 +1,8 @@
 #include "UI.h"
 
+bool windowHovered = false;
+float inputDirLightAngle = lightDirTheta;
+
 void UI::initialize()
 {
     IMGUI_CHECKVERSION();
@@ -32,28 +35,135 @@ void UI::renderUI()
     if (show_ui) {
         if (!ImGui::Begin("Settings", &show_ui, 0))
         {
+            ImGuiIO& io = ImGui::GetIO();
+            windowHovered = io.WantCaptureMouse;
             ImGui::End();
         }
         else {
-            const char* items[] = { "Default", "World position buffer", "Normal buffer", "Albedo", "Depth buffer",
-                "Specularity", "Shadows", "Cascade split depths", "Wireframe"};
-            ImGui::Combo("Display buffer", &Renderer::render_mode, items, IM_ARRAYSIZE(items));
-            ImGui::Separator();
-            ImGui::Text("Skybox to render:");
-            ImGui::Spacing();
-            ImGui::RadioButton("Default", &Renderer::skybox_mode, Renderer::SKYBOX_DEFAULT); ImGui::SameLine();
-            ImGui::RadioButton("Use shadow map", &Renderer::skybox_mode, Renderer::SKYBOX_SHADOW_MAP);
-            ImGui::Separator();
-            ImGui::Text("Draw frustum outline:");
-            ImGui::Spacing();
-            ImGui::RadioButton("No frustum", &Renderer::frustum_outline_mode, Renderer::NO_FRUSTUM_OUTLINE); ImGui::SameLine();
-            ImGui::RadioButton("View frustum", &Renderer::frustum_outline_mode, Renderer::VIEW_FRUSTUM_OUTLINE); ImGui::SameLine();
-            ImGui::RadioButton("Cascade frustum", &Renderer::frustum_outline_mode, Renderer::CASCADE_FRUSTUM_OUTLINE);
-            ImGui::Separator();
-            ImGui::Text("Camera mode:");
-            ImGui::Spacing();
-            ImGui::RadioButton("1", &Renderer::cameraMode, 0); ImGui::SameLine();
-            ImGui::RadioButton("2", &Renderer::cameraMode, 1);
+            ImGuiIO& io = ImGui::GetIO();
+            windowHovered = io.WantCaptureMouse;
+            Renderer* renderer = Renderer::getInstance();
+            if (ImGui::CollapsingHeader("Render/Camera")) {
+                const char* items[] = { "Default", "World position buffer", "Normal buffer", "Albedo", "Depth buffer",
+                    "Specularity", "Shadows", "Cascade split depths", "Wireframe" };
+                ImGui::Combo("Display buffer", &Renderer::render_mode, items, IM_ARRAYSIZE(items));
+                ImGui::Separator();
+                ImGui::Text("Skybox to render:");
+                ImGui::Spacing();
+                ImGui::RadioButton("Default", &Renderer::skybox_mode, Renderer::SKYBOX_DEFAULT); ImGui::SameLine();
+                ImGui::RadioButton("Use shadow map", &Renderer::skybox_mode, Renderer::SKYBOX_SHADOW_MAP);
+                ImGui::Separator();
+                ImGui::Text("Draw frustum outline:");
+                ImGui::Spacing();
+                ImGui::RadioButton("No frustum", &Renderer::frustum_outline_mode, Renderer::NO_FRUSTUM_OUTLINE); ImGui::SameLine();
+                ImGui::RadioButton("View frustum", &Renderer::frustum_outline_mode, Renderer::VIEW_FRUSTUM_OUTLINE); ImGui::SameLine();
+                ImGui::RadioButton("Cascade frustum", &Renderer::frustum_outline_mode, Renderer::CASCADE_FRUSTUM_OUTLINE);
+                ImGui::Separator();
+                ImGui::Text("Camera mode:");
+                ImGui::Spacing();
+                ImGui::RadioButton("1", &Renderer::cameraMode, 0); ImGui::SameLine();
+                ImGui::RadioButton("2", &Renderer::cameraMode, 1);
+            }
+            if (ImGui::CollapsingHeader("Scene")) {
+                static int lightNum = 0;
+
+                //Toggling which point light
+                // Use AlignTextToFramePadding() to align text baseline to the baseline of framed widgets elements
+                // (otherwise a Text+SameLine+Button sequence will have the text a little too high by default!)
+                // See 'Demo->Layout->Text Baseline Alignment' for details.
+                ImGui::AlignTextToFramePadding();
+                ImGui::Text("Point light index:");
+                ImGui::SameLine();
+
+                // Arrow buttons with Repeater
+                float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
+                ImGui::PushButtonRepeat(true);
+                if (ImGui::ArrowButton("##left", ImGuiDir_Left)) { lightNum--; }
+                ImGui::SameLine(0.0f, spacing);
+                if (ImGui::ArrowButton("##right", ImGuiDir_Right)) { lightNum++; }
+                ImGui::PopButtonRepeat();
+                ImGui::SameLine();
+                if (lightNum >= Renderer::numPointLights) lightNum = Renderer::numPointLights - 1;
+                if (lightNum < 0) lightNum = 0;
+                ImGui::Text("%d", lightNum);
+                if (Renderer::numPointLights > 0) {
+                    bool inputLightPosChanged = false, inputLightColorChanged = false, inputLightParamChanged = false;
+                    glm::vec4 inputLightPos = Renderer::lightPos.at(lightNum);
+                    glm::vec4 inputLightColor = Renderer::lightColor.at(lightNum);
+                    glm::vec4 inputLightParam = Renderer::lightParam.at(lightNum);
+                    ImGui::DragFloat3("Light pos:", glm::value_ptr(inputLightPos), 0.01f, -100.0f, 100.0f);
+                    inputLightPosChanged = ImGui::IsItemEdited();
+                    ImGui::InputFloat4("Light param:", glm::value_ptr(inputLightParam));
+                    inputLightParamChanged = ImGui::IsItemEdited();
+                    ImGui::ColorEdit3("Light color:", glm::value_ptr(inputLightColor));
+                    inputLightColorChanged = ImGui::IsItemEdited();
+                    if (inputLightColorChanged || inputLightPosChanged || inputLightParamChanged)
+                        renderer->updatePointLight(lightNum, &inputLightPos, &inputLightColor, &inputLightParam);
+                    //ImGui::InputFloat3("Light pos:", vec4a);
+                    ImGui::Spacing();
+                    bool dirLightAngleChanged = false, dirLightColorChanged = false;
+                    ImGui::DragFloat("Dir light angle:", &inputDirLightAngle, 0.01, 0.0f, pi);
+                    glm::vec4 newLightDir = glm::vec4(cos(inputDirLightAngle) * cos(lightDirPhi),
+                        sin(inputDirLightAngle),
+                        -sin(lightDirPhi) * cos(inputDirLightAngle),
+                        0.0f);
+                    dirLightAngleChanged = ImGui::IsItemEdited();
+                    glm::vec4 newLightDirColor = Renderer::lightDirColor;
+                    ImGui::ColorEdit3("Dir light color:", glm::value_ptr(newLightDirColor));
+                    dirLightColorChanged = ImGui::IsItemEdited();
+                    if (dirLightAngleChanged || dirLightColorChanged) renderer->updateDirectionalLight(&newLightDir, &newLightDirColor);
+                }
+            }
+            //Adjust point light params and position
+            //static float f0 = 0.001f;
+            //ImGui::InputFloat("input float", &f0, 0.01f, 1.0f, "%.3f");
+            //static float vec4a[4] = { 0.10f, 0.20f, 0.30f, 0.44f };
+            //ImGui::InputFloat3("input float3", vec4a);
+            //static float f1 = 1.00f, f2 = 0.0067f;
+            //ImGui::DragFloat("drag float", &f1, 0.005f);
+            //static float col1[3] = { 1.0f, 0.0f, 0.2f };
+            //static float col2[4] = { 0.4f, 0.7f, 0.0f, 0.5f };
+            //ImGui::ColorEdit3("color 1", col1);
+            //ImGui::SameLine(); HelpMarker(
+            //    "Click on the color square to open a color picker.\n"
+             //   "Click and hold to use drag and drop.\n"
+            //    "Right-click on the color square to show options.\n"
+              //  "CTRL+click on individual component to input value.\n");
+
+            //ImGui::ColorEdit4("color 2", col2);
+
+            //ImGuiColorEditFlags misc_flags = (hdr ? ImGuiColorEditFlags_HDR : 0)
+            //ImGui::ColorEdit3("MyColor##1", (float*)&color, misc_flags);
+
+            //static float vec4f[4] = { 0.10f, 0.20f, 0.30f, 0.44f };
+            //static int vec4i[4] = { 1, 5, 100, 255 };
+
+            //ImGui::InputFloat2("input float2", vec4f);
+            //ImGui::DragFloat2("drag float2", vec4f, 0.01f, 0.0f, 1.0f);
+            //ImGui::SliderFloat2("slider float2", vec4f, 0.0f, 1.0f);
+            //ImGui::InputInt2("input int2", vec4i);
+            //ImGui::DragInt2("drag int2", vec4i, 1, 0, 255);
+            //ImGui::SliderInt2("slider int2", vec4i, 0, 255);
+            //ImGui::Spacing();
+
+            //ImGui::InputFloat3("input float3", vec4f);
+            //ImGui::DragFloat3("drag float3", vec4f, 0.01f, 0.0f, 1.0f);
+            //ImGui::SliderFloat3("slider float3", vec4f, 0.0f, 1.0f);
+            //ImGui::InputInt3("input int3", vec4i);
+            //ImGui::DragInt3("drag int3", vec4i, 1, 0, 255);
+            //ImGui::SliderInt3("slider int3", vec4i, 0, 255);
+            //ImGui::Spacing();
+
+            //ImGui::InputFloat4("input float4", vec4f);
+            //ImGui::DragFloat4("drag float4", vec4f, 0.01f, 0.0f, 1.0f);
+            //ImGui::SliderFloat4("slider float4", vec4f, 0.0f, 1.0f);
+            //ImGui::InputInt4("input int4", vec4i);
+            //ImGui::DragInt4("drag int4", vec4i, 1, 0, 255);
+            //ImGui::SliderInt4("slider int4", vec4i, 0, 255);
+            //also add config for every object in scene
+            //save settings to a file
+            //have options to add new objects
+            
             ImGui::End();
         }
         ImGui::Render();

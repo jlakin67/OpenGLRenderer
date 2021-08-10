@@ -85,7 +85,6 @@ void processInput(GLFWwindow* window, Camera& camera) {
 }
 
 void cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
-    bool uiHovered = UI::isWindowHovered();
     if (firstMove) {
         lastX = xpos;
         lastY = ypos;
@@ -100,6 +99,6 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
         deltaY = 0;
     }
     lastX = xpos; lastY = ypos;
-    if (Renderer::cameraMode == 0) camera.processMouse(window, deltaX, deltaY, uiHovered);
-    if (Renderer::cameraMode == 1) cameraAlt.processMouse(window, deltaX, deltaY, uiHovered);
+    if (Renderer::cameraMode == 0) camera.processMouse(window, deltaX, deltaY, windowHovered);
+    if (Renderer::cameraMode == 1) cameraAlt.processMouse(window, deltaX, deltaY, windowHovered);
 }
