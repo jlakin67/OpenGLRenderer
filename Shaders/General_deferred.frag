@@ -48,13 +48,13 @@ void main() {
 		specularColorOut = specularColor;
 	}
 	gSpecularExponent = vec4(specularColorOut, specularHighlight);
-	bool condition1 = all(notEqual(tangent, vec3(0,0,0)));
-	bool condition2 = all(notEqual(bitangent, vec3(0,0,0)));
+	//bool condition1 = all(notEqual(tangent, vec3(0,0,0)));
+	//bool condition2 = all(notEqual(bitangent, vec3(0,0,0)));
 	//w=1 means it wil be used in lighting calculation, w=0 means it won't
 	//meant to separate forward render from deferred
 	vec4 newNormal = vec4(0,0,0,1);
-	if (containsNormal && condition1 && condition2) {
-		newNormal.xyz = TBN*vec3(texture(texture_normal0, texCoords));
+	if (containsNormal) {
+		newNormal.xyz = normalize(TBN*vec3(texture(texture_normal0, texCoords)));
 	} else newNormal.xyz = normal;
 	gNormal = newNormal;
 	gPosition.xyz = pos;
