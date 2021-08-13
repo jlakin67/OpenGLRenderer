@@ -2,6 +2,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/euler_angles.hpp>
 #include <iostream>
 #include <vector>
 #include <unordered_map>
@@ -35,26 +36,30 @@ public:
     std::vector<GLuint> indices;
     std::vector<Texture> textures;
     bool hasTexCoords;
-    void draw(Shader& shader, bool useTexture, glm::vec4 color, bool instanced = false, GLuint numInstances = 1,
-        bool shadowMap = false);
+    glm::vec4 color_diffuse;
+    glm::vec3 color_specular;
+    float specularHighlight;
+    void draw(Shader& shader, bool useTexture, bool instanced = false, GLuint numInstances = 1);
 };
 
 class Model {
 public:
     Model();
+    ~Model();
     void loadModel(std::string path, bool hasSingleMesh = false);
-    void draw(Shader& shader, glm::vec4 color = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), bool shadowMap = false);
-    void setUpInstances(std::vector<glm::vec4>& positions);
-    void drawInstances(Shader& shader, GLuint numInstances, glm::vec4 color = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), 
-        bool shadowMap = false);
+    void draw(Shader& shader);
+    void setUpInstances(std::vector<glm::mat4>& models);
+    void drawInstances(Shader& shader, GLuint numInstances);
     std::string directory;
     std::vector<Mesh> meshes;
     bool hasTexture;
-    glm::mat4 model;
+    glm::vec4 position;
+    float yaw, pitch, roll;
+    glm::vec3 scale;
     GLuint instanceBuf;
 private:
     void loadTexture(aiTextureType type, Mesh& mesh, const aiScene* scene, unsigned int mMaterialIndex);
-    void setUpMesh(aiMesh* ai_mesh, Mesh& mesh);
+    void setUpMesh(aiMesh* ai_mesh, Mesh& mesh, const aiScene* scene, unsigned int mMaterialIndex);
     void setUpBuffers(Mesh& mesh);
     std::unordered_map<std::string, Texture> loadedTextures;
 };

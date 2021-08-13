@@ -6,6 +6,9 @@
 #include <chrono>
 #include <random>
 
+//setup general model asset shader with different shading modes controlled by uniform 
+//and ui for transforming and adding model assets
+
 extern Camera camera;
 extern Camera cameraAlt;
 
@@ -75,6 +78,7 @@ public:
 	static std::vector<glm::vec4> lightPos;
 	static std::vector<glm::vec4> lightColor;
 	static std::vector<glm::vec4> lightParam;
+	static std::vector<Model*> modelAssets;
 
 	//displaying for debugging purposes
 	enum RenderModes {
@@ -91,7 +95,12 @@ public:
 private:
 
 	Renderer() = default;
-	~Renderer() { delete instance; }
+	~Renderer() { 
+		if (instance) delete instance;
+		for (Model* model : modelAssets) {
+			delete model;
+		}
+	}
 
 	static Renderer* instance;
 
@@ -136,8 +145,8 @@ private:
 
 	GLuint deferredFramebufferID = 0;
 	GLint deferredFramebufferWidth = SCR_WIDTH, deferredFramebufferHeight = SCR_HEIGHT;
-	std::vector<GLint> deferredAttachmentFormats{ GL_R32F, GL_RGBA16F, GL_RGBA16F, GL_RGBA16F, GL_R16F};
-	std::vector<GLuint> deferredAttachments; //0 = depth, 1 = position, 2 = normal, 3 = albedoSpec, 4 = ambient occlusion
+	std::vector<GLint> deferredAttachmentFormats{ GL_R32F, GL_RGBA16F, GL_RGBA16F, GL_RGBA16F, GL_RGBA16F};
+	std::vector<GLuint> deferredAttachments; //0 = depth, 1 = position, 2 = normal, 3 = albedo, 4 = specular/exponent
 	std::vector<GLuint> deferredColorTextureIDs;
 	GLuint deferredDepthRenderbufferID = 0;
 	Shader quadShader;
@@ -178,7 +187,7 @@ private:
 	glm::mat4 quadModel;
 	void setupTestScenePlane();
 
-	Model testModel;
+	
 	Shader testModelShader;
 	void setupTestSceneModel();
 

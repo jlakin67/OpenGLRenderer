@@ -253,5 +253,17 @@
     <None Include="Shaders\Postprocess.frag">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="Shaders\General_deferred.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\General_deferred.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\Deferred_general_ambient_dir.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\Deferred_lv_general.frag">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

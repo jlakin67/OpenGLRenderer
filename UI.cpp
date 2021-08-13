@@ -64,7 +64,7 @@ void UI::renderUI()
                 ImGui::RadioButton("1", &Renderer::cameraMode, 0); ImGui::SameLine();
                 ImGui::RadioButton("2", &Renderer::cameraMode, 1);
             }
-            if (ImGui::CollapsingHeader("Scene")) {
+            if (ImGui::CollapsingHeader("Lights")) {
                 static int lightNum = 0;
 
                 //Toggling which point light
@@ -112,6 +112,42 @@ void UI::renderUI()
                     ImGui::ColorEdit3("Dir light color:", glm::value_ptr(newLightDirColor));
                     dirLightColorChanged = ImGui::IsItemEdited();
                     if (dirLightAngleChanged || dirLightColorChanged) renderer->updateDirectionalLight(&newLightDir, &newLightDirColor);
+                }
+            }
+            if (ImGui::CollapsingHeader("Scene")) {
+                static int modelNum = 0;
+                ImGui::AlignTextToFramePadding();
+                ImGui::Text("Model index:");
+                ImGui::SameLine();
+
+                // Arrow buttons with Repeater
+                float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
+                ImGui::PushButtonRepeat(true);
+                if (ImGui::ArrowButton("##left", ImGuiDir_Left)) { modelNum--; }
+                ImGui::SameLine(0.0f, spacing);
+                if (ImGui::ArrowButton("##right", ImGuiDir_Right)) { modelNum++; }
+                ImGui::PopButtonRepeat();
+                ImGui::SameLine();
+                if (modelNum >= Renderer::modelAssets.size()) modelNum = Renderer::modelAssets.size() - 1;
+                if (modelNum < 0) modelNum = 0;
+                ImGui::Text("%d", modelNum);
+
+                if (!Renderer::modelAssets.empty()) {
+                    //ImGui::DragFloat3("Light pos:", glm::value_ptr(inputLightPos), 0.01f, -100.0f, 100.0f);
+                    //ImGui::InputFloat3("input float3", vec4f);
+                    Model* curModel = Renderer::modelAssets.at(modelNum);
+                    glm::vec3 ypr(curModel->yaw, curModel->pitch, curModel->roll);
+                    ImGui::DragFloat3("Pitch, roll, yaw", glm::value_ptr(ypr), 0.01f, 0.0f, 2*pi);
+                    curModel->pitch = ypr.y;
+                    curModel->yaw = ypr.x;
+                    curModel->roll = ypr.z;
+                    glm::vec3 inputPosition = curModel->position;
+                    //ImGui::DragFloat3("Position XYZ", glm::value_ptr(inputPosition), 0.1f, -100.0f, 100.0f);
+                    ImGui::InputFloat3("Position XYZ", glm::value_ptr(inputPosition));
+                    curModel->position = glm::vec4(inputPosition, 1.0f);
+                    glm::vec3 inputScale = curModel->scale;
+                    ImGui::InputFloat3("Scale XYZ", glm::value_ptr(inputScale));
+                    curModel->scale = inputScale;
                 }
             }
             //Adjust point light params and position

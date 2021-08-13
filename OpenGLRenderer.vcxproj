@@ -193,8 +193,12 @@
     <None Include="Shaders\Deferred.frag" />
     <None Include="Shaders\Deferred_ambient.frag" />
     <None Include="Shaders\Deferred_ambient_dir.frag" />
+    <None Include="Shaders\Deferred_general_ambient_dir.frag" />
     <None Include="Shaders\Deferred_lv_bp.frag" />
     <None Include="Shaders\Deferred_lv_bp.vert" />
+    <None Include="Shaders\Deferred_lv_general.frag" />
+    <None Include="Shaders\General_deferred.frag" />
+    <None Include="Shaders\General_deferred.vert" />
     <None Include="Shaders\LightDisplay.frag" />
     <None Include="Shaders\LightDisplay.vert" />
     <None Include="Shaders\Model_basic.frag" />

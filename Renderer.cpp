@@ -156,18 +156,20 @@ void Renderer::setupLightVolumes() {
 	glVertexAttribDivisor(8, 1);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
-	lightVolumeShader.loadFile("Shaders/Deferred_lv_bp.vert", "Shaders/Deferred_lv_bp.frag");
+	lightVolumeShader.loadFile("Shaders/Deferred_lv_bp.vert", "Shaders/Deferred_lv_general.frag");
 	lightVolumeShader.useProgram();
 	lightVolumeShader.setInt("gPosition", 0);
 	lightVolumeShader.setInt("gNormal", 1);
-	lightVolumeShader.setInt("gAlbedoSpec", 2);
+	lightVolumeShader.setInt("gAlbedo", 2);
 	lightVolumeShader.setInt("shadowMaps", 3);
 	lightVolumeShader.setInt("noise", 4);
+	lightVolumeShader.setInt("gSpecularExponent", 5);
 	lightVolumeShader.setBool("containsShadow", true);
 	lightVolumeShader.setFloat("shadowFar", shadow_far);
 	lightVolumeShader.setFloat("ambientStrength", ambientStrength);
 	glm::vec2 windowSize(SCR_WIDTH, SCR_HEIGHT);
 	lightVolumeShader.setVec2("windowSize", glm::value_ptr(windowSize));
+	lightVolumeShader.setInt("shadingMode", 0);
 }
 
 
@@ -246,19 +248,21 @@ void Renderer::setupCascadedShadowMaps() {
 
 
 void Renderer::setupDirectionalLightShader() {
-	directionalAmbientShader.loadFile("Shaders/Quad_framebuffer.vert", "Shaders/Deferred_ambient_dir.frag");
+	directionalAmbientShader.loadFile("Shaders/Quad_framebuffer.vert", "Shaders/Deferred_general_ambient_dir.frag");
 	directionalAmbientShader.useProgram();
 	directionalAmbientShader.setInt("gPosition", 0);
 	directionalAmbientShader.setInt("gNormal", 1);
-	directionalAmbientShader.setInt("gAlbedoSpec", 2);
+	directionalAmbientShader.setInt("gAlbedo", 2);
 	directionalAmbientShader.setInt("gDepth", 3);
 	directionalAmbientShader.setInt("shadowCascades", 4);
+	directionalAmbientShader.setInt("gSpecularExponent", 5);
 	directionalAmbientShader.setInt("numShadowCascades", numShadowCascades);
 	glUniform1fv(glGetUniformLocation(directionalAmbientShader.program, "shadowSplitDepths"),
 		numShadowCascades + 1, shadowSplitDepths);
 	directionalAmbientShader.setBool("containsShadow", true);
 	directionalAmbientShader.setFloat("shadowFar", shadow_far);
 	directionalAmbientShader.setFloat("ambientStrength", ambientStrength);
+	directionalAmbientShader.setInt("shadingMode", 0);
 }
 
 void Renderer::setupPointShadowMaps() {
@@ -519,11 +523,13 @@ void Renderer::setupTestScenePlane() {
 
 
 void Renderer::setupTestSceneModel() {
-	testModel.loadModel("C:/Users/juice/Documents/Graphics/Models/backpack/backpack.obj");
-	testModelShader.loadFile("Shaders/Model_basic.vert", "Shaders/Model_blinn_phong_deferred.frag");
+	Model* testModel = new Model;
+	testModel->loadModel("C:/Users/juice/Documents/Graphics/Models/backpack/backpack.obj");
+	testModelShader.loadFile("Shaders/General_deferred.vert", "Shaders/General_deferred.frag");
 	testModelShader.useProgram();
-	testModel.model = glm::scale(testModel.model, glm::vec3(1.0f, 1.0f, 1.0f));
-	testModel.model = glm::translate(testModel.model, glm::vec3(0.0f, 2.0f, 3.0f));
+	testModel->scale = glm::vec3(1.0f, 1.0f, 1.0f);
+	testModel->position = glm::vec4(0.0f, 2.0f, 3.0f, 1.0f);
+	modelAssets.push_back(testModel);
 }
 
 void Renderer::renderTestSceneDeferredPass() {
@@ -533,7 +539,7 @@ void Renderer::renderTestSceneDeferredPass() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glClearBufferfv(GL_COLOR, 0, &far);
 	glActiveTexture(GL_TEXTURE0);
-	testModel.draw(testModelShader);
+	if (!modelAssets.empty()) if (modelAssets.at(0)) modelAssets.at(0)->draw(testModelShader);
 	planeShader.useProgram();
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, planeTextureID);
@@ -612,7 +618,7 @@ void Renderer::renderTestSceneShadowMapCascades() {
 	glClear(GL_DEPTH_BUFFER_BIT);
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
-	testModel.draw(cascadedShadowMapShader, glm::vec4(0.0, 0.0, 0.0, 0.0), false);
+	if (!modelAssets.empty()) if (modelAssets.at(0)) modelAssets.at(0)->draw(cascadedShadowMapShader);
 	glBindVertexArray(quadVAO);
 	cascadedShadowMapShader.setMat4("model", glm::value_ptr(quadModel));
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
@@ -628,7 +634,7 @@ void Renderer::renderTestScenePointShadowMaps() {
 	glClearDepth(1.0f);
 	glClear(GL_DEPTH_BUFFER_BIT);
 	glEnable(GL_POLYGON_OFFSET_FILL);
-	testModel.draw(shadowMapShader, glm::vec4(0.0f, 0.0f, 0.0f, 0.0f), false);
+	if (!modelAssets.empty()) if (modelAssets.at(0)) modelAssets.at(0)->draw(shadowMapShader);
 	glBindVertexArray(quadVAO);
 	shadowMapShader.setMat4("model", glm::value_ptr(quadModel));
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
@@ -654,6 +660,8 @@ void Renderer::renderTestSceneLightingPass() {
 	glBindTexture(GL_TEXTURE_2D, deferredColorTextureIDs.at(0)); //gDepth
 	glActiveTexture(GL_TEXTURE4);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, cascadedShadowTextureArrayID);
+	glActiveTexture(GL_TEXTURE5);
+	glBindTexture(GL_TEXTURE_2D, deferredColorTextureIDs.at(4)); //gSpecularExponent
 	glBindVertexArray(quadVAO);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 	glBindVertexArray(0);
@@ -858,7 +866,7 @@ void Renderer::renderTestScene() {
 		glBindVertexArray(0);
 		glDisable(GL_CULL_FACE);
 		wireframeShader.setBool("instanced", false);
-		testModel.draw(wireframeShader);
+		if (!modelAssets.empty()) if (modelAssets.at(0)) modelAssets.at(0)->draw(wireframeShader);
 		glDepthFunc(GL_LEQUAL);
 		sunShader.useProgram();
 		glBindVertexArray(cubeVAO);
@@ -945,7 +953,7 @@ void Renderer::renderTestScene() {
 			glBindVertexArray(0);
 			glEnable(GL_DEPTH_TEST);
 		}
-		else if (render_mode == RENDER_ALBEDO || render_mode == RENDER_SPECULARITY) {
+		else if (render_mode == RENDER_ALBEDO) {
 			glDisable(GL_DEPTH_TEST);
 			quadShader.useProgram();
 			quadShader.setInt("renderMode", render_mode);
@@ -962,6 +970,17 @@ void Renderer::renderTestScene() {
 			quadShader.setInt("renderMode", render_mode);
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, deferredColorTextureIDs.at(0));
+			glBindVertexArray(quadVAO);
+			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+			glBindVertexArray(0);
+			glEnable(GL_DEPTH_TEST);
+		}
+		else if (render_mode == RENDER_SPECULARITY) {
+			glDisable(GL_DEPTH_TEST);
+			quadShader.useProgram();
+			quadShader.setInt("renderMode", render_mode);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, deferredColorTextureIDs.at(4));
 			glBindVertexArray(quadVAO);
 			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 			glBindVertexArray(0);
@@ -1103,6 +1122,8 @@ void ShadowCascadeTest::draw()
 }
 
 Renderer* Renderer::instance = nullptr;
+
+std::vector<Model*> Renderer::modelAssets;
 
 Renderer* Renderer::getInstance()
 {
