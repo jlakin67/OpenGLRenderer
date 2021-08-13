@@ -406,7 +406,7 @@ void Renderer::setupSunDisplay() {
 	sunShader.loadFile("Shaders/Sun.vert", "Shaders/Sun.frag");
 }
 
-void Renderer::setupTestSceneLights() {
+void Renderer::setupTestSceneLights() { //old
 	lightPos.push_back(glm::vec4(3.0, 3.0, 3.0, 1.0));
 	lightPos.push_back(glm::vec4(0.0, 3.0, -1.0, 1.0));
 	lightColor.push_back(glm::vec4(0.6, 0.6, 0.6, 1.0));
@@ -490,7 +490,7 @@ void Renderer::setupWireframeShader() {
 }
 
 
-void Renderer::setupTestScenePlane() {
+void Renderer::setupTestScenePlane() { //old
 	GLubyte* imagePtr = nullptr;
 	quadModel = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 	quadModel = glm::scale(quadModel, glm::vec3(planeScale, planeScale, 1.0f));
@@ -522,24 +522,28 @@ void Renderer::setupTestScenePlane() {
 }
 
 
-void Renderer::setupTestSceneModel() {
+void Renderer::setupModelShader()
+{
+	modelShader.loadFile("Shaders/General_deferred.vert", "Shaders/General_deferred.frag");
+	modelShader.useProgram();
+}
+
+void Renderer::setupTestSceneModel() { //old
 	Model* testModel = new Model;
 	testModel->loadModel("C:/Users/juice/Documents/Graphics/Models/backpack/backpack.obj");
-	testModelShader.loadFile("Shaders/General_deferred.vert", "Shaders/General_deferred.frag");
-	testModelShader.useProgram();
 	testModel->scale = glm::vec3(1.0f, 1.0f, 1.0f);
 	testModel->position = glm::vec4(0.0f, 2.0f, 3.0f, 1.0f);
 	modelAssets.push_back(testModel);
 }
 
-void Renderer::renderTestSceneDeferredPass() {
+void Renderer::renderTestSceneDeferredPass() { //old
 	glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
 	glBindFramebuffer(GL_FRAMEBUFFER, deferredFramebufferID);
 	glClearColor(0, 0, 0, 0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glClearBufferfv(GL_COLOR, 0, &far);
 	glActiveTexture(GL_TEXTURE0);
-	if (!modelAssets.empty()) if (modelAssets.at(0)) modelAssets.at(0)->draw(testModelShader);
+	if (!modelAssets.empty()) if (modelAssets.at(0)) modelAssets.at(0)->draw(modelShader);
 	planeShader.useProgram();
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, planeTextureID);
@@ -549,8 +553,23 @@ void Renderer::renderTestSceneDeferredPass() {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
+void Renderer::renderDeferredPass()
+{
+	glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+	glBindFramebuffer(GL_FRAMEBUFFER, deferredFramebufferID);
+	glClearColor(0, 0, 0, 0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glClearBufferfv(GL_COLOR, 0, &far);
+	glActiveTexture(GL_TEXTURE0);
+	for (int i = 0; i < modelAssets.size(); i++) {
+		Model* curModel = modelAssets.at(i);
+		curModel->draw(modelShader);
+	}
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
 
-void Renderer::renderTestSceneShadowMapCascades() {
+
+void Renderer::renderTestSceneShadowMapCascades() { //old
 	glm::mat4 dirLightView = glm::lookAt(camera.pos, camera.pos - lightDir, glm::vec3(0.0f, 1.0f, 0.0f));
 	cameraViewToWorld = glm::inverse(view);
 	lightViewtoWorld = glm::inverse(dirLightView);
@@ -627,13 +646,88 @@ void Renderer::renderTestSceneShadowMapCascades() {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void Renderer::renderTestScenePointShadowMaps() {
+void Renderer::renderShadowMapCascades()
+{
+	glm::mat4 dirLightView = glm::lookAt(camera.pos, camera.pos - lightDir, glm::vec3(0.0f, 1.0f, 0.0f));
+	cameraViewToWorld = glm::inverse(view);
+	lightViewtoWorld = glm::inverse(dirLightView);
+	//using a bounding box to construct view and orthographic matrices
+	//gets rid of shimmering due to camera rotation
+	for (int i = 0; i < numShadowCascades; i++) {
+		worldShadowBounds[4 * i + 0] = cameraViewToWorld * glm::vec4(cascadedShadowBounds[4 * i + 0], 1.0f);
+		worldShadowBounds[4 * i + 1] = cameraViewToWorld * glm::vec4(cascadedShadowBounds[4 * i + 1], 1.0f);
+		worldShadowBounds[4 * i + 2] = cameraViewToWorld * glm::vec4(cascadedShadowBounds[4 * i + 2], 1.0f);
+		worldShadowBounds[4 * i + 3] = cameraViewToWorld * glm::vec4(cascadedShadowBounds[4 * i + 3], 1.0f);
+		worldShadowBounds[4 * i + 4] = cameraViewToWorld * glm::vec4(cascadedShadowBounds[4 * i + 4], 1.0f);
+		worldShadowBounds[4 * i + 5] = cameraViewToWorld * glm::vec4(cascadedShadowBounds[4 * i + 5], 1.0f);
+		worldShadowBounds[4 * i + 6] = cameraViewToWorld * glm::vec4(cascadedShadowBounds[4 * i + 6], 1.0f);
+		worldShadowBounds[4 * i + 7] = cameraViewToWorld * glm::vec4(cascadedShadowBounds[4 * i + 7], 1.0f);
+		glm::vec3 frustumCenter = glm::vec3(0.0f);
+		for (int j = 4 * i; j < ((4 * i) + 8); j++) {
+			frustumCenter += worldShadowBounds[j];
+		}
+		frustumCenter /= 8.0f;
+		//placing view at center of bounding box helps reduce quantization errors
+		glm::mat4 dirLightView = glm::lookAt(frustumCenter, frustumCenter - lightDir, glm::vec3(0.0f, 1.0f, 0.0f));
+
+
+		GLfloat maxDistance =
+			std::max(
+				{ glm::length(frustumCenter - worldShadowBounds[4 * i + 0]), glm::length(frustumCenter - worldShadowBounds[4 * i + 4]),
+				 glm::length(frustumCenter - worldShadowBounds[4 * i + 1]), glm::length(frustumCenter - worldShadowBounds[4 * i + 1 + 4]),
+				 glm::length(frustumCenter - worldShadowBounds[4 * i + 2]), glm::length(frustumCenter - worldShadowBounds[4 * i + 2 + 4]),
+				 glm::length(frustumCenter - worldShadowBounds[4 * i + 3]), glm::length(frustumCenter - worldShadowBounds[4 * i + 3 + 4]) }
+		);
+
+
+		//displaying purposes for debugging
+		cascadedShadowBoxBounds[8 * i + 0] = frustumCenter + ((maxDistance)*glm::normalize(glm::vec3(-1, 1, 1)));
+		cascadedShadowBoxBounds[8 * i + 1] = frustumCenter + ((maxDistance)*glm::normalize(glm::vec3(1, 1, 1)));
+		cascadedShadowBoxBounds[8 * i + 2] = frustumCenter + ((maxDistance)*glm::normalize(glm::vec3(-1, -1, 1)));
+		cascadedShadowBoxBounds[8 * i + 3] = frustumCenter + ((maxDistance)*glm::normalize(glm::vec3(1, -1, 1)));
+		cascadedShadowBoxBounds[8 * i + 4] = frustumCenter + ((maxDistance)*glm::normalize(glm::vec3(-1, 1, -1)));
+		cascadedShadowBoxBounds[8 * i + 5] = frustumCenter + ((maxDistance)*glm::normalize(glm::vec3(1, 1, -1)));
+		cascadedShadowBoxBounds[8 * i + 6] = frustumCenter + ((maxDistance)*glm::normalize(glm::vec3(-1, -1, -1)));
+		cascadedShadowBoxBounds[8 * i + 7] = frustumCenter + ((maxDistance)*glm::normalize(glm::vec3(1, -1, -1)));
+
+		frustumCenter = dirLightView * glm::vec4(frustumCenter, 1.0f);
+
+		glm::mat4 cascadedOrtho = glm::ortho(frustumCenter.x - maxDistance, frustumCenter.x + maxDistance,
+			frustumCenter.y - maxDistance, frustumCenter.y + maxDistance,
+			frustumCenter.z - maxDistance, frustumCenter.z + maxDistance);
+		//reduce shimmering from moving camera
+		glm::vec4 arbitraryPoint(0.0f, 0.0f, 0.0f, 1.0f);
+		glm::vec4 arbitraryPointTexCoord = cascadedOrtho * dirLightView * arbitraryPoint;
+		arbitraryPointTexCoord *= (directionalShadowWidth / 2.0f);
+		glm::vec4 shadowTexCoordOffset = glm::round(arbitraryPointTexCoord) - arbitraryPointTexCoord;
+		shadowTexCoordOffset *= (2.0f / directionalShadowWidth);
+		cascadedOrtho[3] += glm::vec4(shadowTexCoordOffset.x, shadowTexCoordOffset.y, 0.0f, 0.0f);
+
+		cascadedShadowMatrices[i] = cascadedOrtho * dirLightView;
+	}
+	glBindFramebuffer(GL_FRAMEBUFFER, cascadedShadowFramebufferID);
+	cascadedShadowMapShader.useProgram();
+	glViewportArrayv(0, numShadowCascades, cascadedShadowViewports.data());
+	glUniformMatrix4fv(glGetUniformLocation(cascadedShadowMapShader.program, "shadowMatrices"),
+		numShadowCascades, GL_FALSE, glm::value_ptr(cascadedShadowMatrices[0]));
+	glClearDepth(1.0f);
+	glClear(GL_DEPTH_BUFFER_BIT);
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
+	for (int i = 0; i < modelAssets.size(); i++) {
+		Model* curModel = modelAssets.at(i);
+		curModel->draw(cascadedShadowMapShader);
+	}
+	glDisable(GL_CULL_FACE);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void Renderer::renderTestScenePointShadowMaps() { //old
 	shadowMapShader.useProgram();
 	glBindFramebuffer(GL_FRAMEBUFFER, shadowFramebufferID);
 	glViewport(0, 0, shadowWidth, shadowHeight);
 	glClearDepth(1.0f);
 	glClear(GL_DEPTH_BUFFER_BIT);
-	glEnable(GL_POLYGON_OFFSET_FILL);
 	if (!modelAssets.empty()) if (modelAssets.at(0)) modelAssets.at(0)->draw(shadowMapShader);
 	glBindVertexArray(quadVAO);
 	shadowMapShader.setMat4("model", glm::value_ptr(quadModel));
@@ -642,7 +736,21 @@ void Renderer::renderTestScenePointShadowMaps() {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void Renderer::renderTestSceneLightingPass() {
+void Renderer::renderPointShadowMaps()
+{
+	shadowMapShader.useProgram();
+	glBindFramebuffer(GL_FRAMEBUFFER, shadowFramebufferID);
+	glViewport(0, 0, shadowWidth, shadowHeight);
+	glClearDepth(1.0f);
+	glClear(GL_DEPTH_BUFFER_BIT);
+	for (int i = 0; i < modelAssets.size(); i++) {
+		Model* curModel = modelAssets.at(i);
+		curModel->draw(shadowMapShader);
+	}
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void Renderer::renderLightingPass() {
 	glBindFramebuffer(GL_FRAMEBUFFER, postprocessFramebufferID);
 	//separate lighting passes for deferred
 	glDisable(GL_DEPTH_TEST);
@@ -655,7 +763,7 @@ void Renderer::renderTestSceneLightingPass() {
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, deferredColorTextureIDs.at(2)); //gNormal
 	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D, deferredColorTextureIDs.at(3)); //gAlbedoSpec
+	glBindTexture(GL_TEXTURE_2D, deferredColorTextureIDs.at(3)); //gAlbedo
 	glActiveTexture(GL_TEXTURE3);
 	glBindTexture(GL_TEXTURE_2D, deferredColorTextureIDs.at(0)); //gDepth
 	glActiveTexture(GL_TEXTURE4);
@@ -828,10 +936,11 @@ void Renderer::updateDirectionalLight(glm::vec4* newLightDir, glm::vec4* newLigh
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
-void Renderer::setupTestScene() {
+void Renderer::setupTestScene() { //old
 	setupPlaneMesh();
 	setupCubeMesh();
 	setupTestSceneLights();
+	setupModelShader();
 	setupTestSceneModel();
 	setupTestScenePlane();
 	setupUniformBuffers();
@@ -849,7 +958,29 @@ void Renderer::setupTestScene() {
 	setupWireframeShader();
 }
 
-void Renderer::renderTestScene() {
+void Renderer::setup()
+{
+	setupPlaneMesh();
+	setupCubeMesh();
+	setupTestSceneLights();
+	setupModelShader();
+	setupTestSceneModel();
+	setupUniformBuffers();
+	setupRandomTexture();
+	setupSkybox();
+	setupCascadedShadowMaps();
+	setupDirectionalLightShader();
+	setupPointShadowMaps();
+	setupDeferredFramebuffer();
+	setupPostprocessFramebuffer();
+	setupTestAxis();
+	setupLightDisplay();
+	setupShadowTesting();
+	setupSunDisplay();
+	setupWireframeShader();
+}
+
+void Renderer::renderTestScene() { //old
 	if (render_mode == RENDER_WIREFRAME) {
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		wireframeShader.useProgram();
@@ -886,7 +1017,147 @@ void Renderer::renderTestScene() {
 			glBindFramebuffer(GL_FRAMEBUFFER, postprocessFramebufferID);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
-			renderTestSceneLightingPass();
+			renderLightingPass();
+			drawMiscObjects();
+			if (frustum_outline_mode != NO_FRUSTUM_OUTLINE) drawFrustums();
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			glEnable(GL_FRAMEBUFFER_SRGB);
+			glDisable(GL_DEPTH_TEST);
+			postprocessShader.useProgram();
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, postprocessColorTextureID);
+			glBindVertexArray(quadVAO);
+			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+			glBindVertexArray(0);
+			glEnable(GL_DEPTH_TEST);
+			glBindTexture(GL_TEXTURE_2D, 0);
+			glDisable(GL_FRAMEBUFFER_SRGB);
+		}
+		else if (render_mode == RENDER_SHADOW) {
+			glDisable(GL_DEPTH_TEST);
+			shadowTestShader.useProgram();
+			glUniformMatrix4fv(glGetUniformLocation(shadowTestShader.program, "cascadedShadowMatrices"),
+				numShadowCascades, GL_FALSE, glm::value_ptr(cascadedShadowMatrices[0]));
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, deferredColorTextureIDs.at(1)); //gPosition
+			glActiveTexture(GL_TEXTURE1);
+			glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, shadowCubemapArrayID);
+			glActiveTexture(GL_TEXTURE2);
+			glBindTexture(GL_TEXTURE_2D, deferredColorTextureIDs.at(0));
+			glActiveTexture(GL_TEXTURE3);
+			glBindTexture(GL_TEXTURE_2D_ARRAY, cascadedShadowTextureArrayID);
+			glActiveTexture(GL_TEXTURE4);
+			glBindTexture(GL_TEXTURE_2D, deferredColorTextureIDs.at(2));
+			glActiveTexture(GL_TEXTURE5);
+			glBindTexture(GL_TEXTURE_3D, randomTextureID);
+			glBindVertexArray(quadVAO);
+			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+			glBindVertexArray(0);
+			glEnable(GL_DEPTH_TEST);
+			glBindFramebuffer(GL_READ_FRAMEBUFFER, deferredFramebufferID);
+			glBlitFramebuffer(
+				0, 0, deferredFramebufferWidth, deferredFramebufferHeight, 0, 0, SCR_WIDTH, SCR_HEIGHT,
+				GL_DEPTH_BUFFER_BIT, GL_NEAREST
+			);
+			testAxis.draw();
+			glActiveTexture(GL_TEXTURE0);
+		}
+		else if (render_mode == RENDER_POSITION) {
+			glDisable(GL_DEPTH_TEST);
+			quadShader.useProgram();
+			quadShader.setInt("renderMode", render_mode);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, deferredColorTextureIDs.at(1));
+			glBindVertexArray(quadVAO);
+			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+			glBindVertexArray(0);
+			glEnable(GL_DEPTH_TEST);
+		}
+		else if (render_mode == RENDER_NORMAL) {
+			glDisable(GL_DEPTH_TEST);
+			quadShader.useProgram();
+			quadShader.setInt("renderMode", render_mode);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, deferredColorTextureIDs.at(2));
+			glBindVertexArray(quadVAO);
+			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+			glBindVertexArray(0);
+			glEnable(GL_DEPTH_TEST);
+		}
+		else if (render_mode == RENDER_ALBEDO) {
+			glDisable(GL_DEPTH_TEST);
+			quadShader.useProgram();
+			quadShader.setInt("renderMode", render_mode);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, deferredColorTextureIDs.at(3));
+			glBindVertexArray(quadVAO);
+			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+			glBindVertexArray(0);
+			glEnable(GL_DEPTH_TEST);
+		}
+		else if (render_mode == RENDER_DEPTH || render_mode == RENDER_CASCADE_DEPTHS) {
+			glDisable(GL_DEPTH_TEST);
+			quadShader.useProgram();
+			quadShader.setInt("renderMode", render_mode);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, deferredColorTextureIDs.at(0));
+			glBindVertexArray(quadVAO);
+			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+			glBindVertexArray(0);
+			glEnable(GL_DEPTH_TEST);
+		}
+		else if (render_mode == RENDER_SPECULARITY) {
+			glDisable(GL_DEPTH_TEST);
+			quadShader.useProgram();
+			quadShader.setInt("renderMode", render_mode);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, deferredColorTextureIDs.at(4));
+			glBindVertexArray(quadVAO);
+			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+			glBindVertexArray(0);
+			glEnable(GL_DEPTH_TEST);
+		}
+	}
+}
+
+void Renderer::render() {
+	if (render_mode == RENDER_WIREFRAME) {
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		wireframeShader.useProgram();
+		testAxis.draw();
+		wireframeShader.useProgram();
+		wireframeShader.setBool("instanced", true);
+		glEnable(GL_CULL_FACE);
+		glCullFace(GL_BACK);
+		glBindVertexArray(cubeVAO);
+		glDrawArraysInstanced(GL_TRIANGLES, 0, 36, numPointLights);
+		glBindVertexArray(0);
+		glDisable(GL_CULL_FACE);
+		wireframeShader.setBool("instanced", false);
+		for (int i = 0; i < modelAssets.size(); i++) {
+			Model* curModel = modelAssets.at(i);
+			curModel->draw(wireframeShader);
+		}
+		glDepthFunc(GL_LEQUAL);
+		sunShader.useProgram();
+		glBindVertexArray(cubeVAO);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+		glBindVertexArray(0);
+		glDepthFunc(GL_LESS);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	}
+	else {
+		renderDeferredPass();
+		renderShadowMapCascades();
+		fillShadowCascadeBuffer();
+		renderPointShadowMaps();
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+		if (render_mode == RENDER_DEFAULT) {
+			glBindFramebuffer(GL_FRAMEBUFFER, postprocessFramebufferID);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+			renderLightingPass();
 			drawMiscObjects();
 			if (frustum_outline_mode != NO_FRUSTUM_OUTLINE) drawFrustums();
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);

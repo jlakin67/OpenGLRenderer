@@ -63,9 +63,10 @@ public:
 	void updatePointLight(int index, glm::vec4* position, glm::vec4* color, glm::vec4* param);
 	void updateDirectionalLight(glm::vec4* newLightDir, glm::vec4* newLightDirColor);
 
-	//debug scene used for previous versions of this code
-	void setupTestScene();
-	void renderTestScene();
+	void setupTestScene(); //old, debug scene used for previous versions of this code
+	void setup();
+	void renderTestScene(); //old
+	void render();
 
 	static glm::mat4 view;
 	static glm::mat4 altView;
@@ -166,7 +167,7 @@ private:
 	Shader sunShader;
 	void setupSunDisplay();
 
-	void setupTestSceneLights();
+	void setupTestSceneLights(); //old
 
 	Shader shadowTestShader;
 	ShadowCascadeTest shadowCascadeTest;
@@ -185,24 +186,29 @@ private:
 	GLuint planeTextureID = 0;
 	Shader planeShader;
 	glm::mat4 quadModel;
-	void setupTestScenePlane();
+	void setupTestScenePlane(); //old
 
 	
-	Shader testModelShader;
-	void setupTestSceneModel();
+	Shader modelShader;
+	void setupModelShader();
 
-	void renderTestSceneDeferredPass();
+	void setupTestSceneModel(); //old
+
+	void renderTestSceneDeferredPass(); //old
+	void renderDeferredPass();
 
 	glm::mat4 cascadedShadowMatrices[numShadowCascades];
 	glm::mat4 cameraViewToWorld = glm::inverse(view);
 	glm::mat4 lightViewtoWorld = glm::mat4(1.0f);
 	glm::vec3 worldShadowBounds[4 * (numShadowCascades + 1)];
 	glm::vec3 cascadedShadowBoxBounds[8 * (numShadowCascades + 1)];
-	void renderTestSceneShadowMapCascades();
+	void renderTestSceneShadowMapCascades(); //old
+	void renderShadowMapCascades();
 	
-	void renderTestScenePointShadowMaps();
+	void renderTestScenePointShadowMaps(); //old
+	void renderPointShadowMaps();
 
-	void renderTestSceneLightingPass();
+	void renderLightingPass();
 
 	void drawFrustums();
 

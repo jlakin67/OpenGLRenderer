@@ -65,7 +65,7 @@ int main(int argc, char* argv[])
     UI::initialize();
 
     Renderer* renderer = Renderer::getInstance();
-    renderer->setupTestScene();
+    renderer->setup();
 
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glfwSetTime(0);
@@ -86,7 +86,7 @@ int main(int argc, char* argv[])
             renderer->updateViewUniformBuffer(Renderer::altView);
         }
 
-        renderer->renderTestScene();
+        renderer->render();
 
         //Imgui frame
         UI::renderUI();
