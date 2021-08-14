@@ -100,19 +100,34 @@ void UI::renderUI()
                     if (inputLightColorChanged || inputLightPosChanged || inputLightParamChanged)
                         renderer->updatePointLight(lightNum, &inputLightPos, &inputLightColor, &inputLightParam);
                     //ImGui::InputFloat3("Light pos:", vec4a);
-                    ImGui::Spacing();
-                    bool dirLightAngleChanged = false, dirLightColorChanged = false;
-                    ImGui::DragFloat("Dir light angle:", &inputDirLightAngle, 0.01, 0.0f, pi);
-                    glm::vec4 newLightDir = glm::vec4(cos(inputDirLightAngle) * cos(lightDirPhi),
-                        sin(inputDirLightAngle),
-                        -sin(lightDirPhi) * cos(inputDirLightAngle),
-                        0.0f);
-                    dirLightAngleChanged = ImGui::IsItemEdited();
-                    glm::vec4 newLightDirColor = Renderer::lightDirColor;
-                    ImGui::ColorEdit3("Dir light color:", glm::value_ptr(newLightDirColor));
-                    dirLightColorChanged = ImGui::IsItemEdited();
-                    if (dirLightAngleChanged || dirLightColorChanged) renderer->updateDirectionalLight(&newLightDir, &newLightDirColor);
                 }
+                ImGui::Spacing();
+                if (Renderer::numPointLights < maxPointLights) {
+                    if (ImGui::Button("Push point light")) {
+                        renderer->pushPointLight();
+                    }
+                }
+                if (Renderer::numPointLights > 0) {
+                    ImGui::SameLine();
+                    if (ImGui::Button("Pop point light")) {
+                        renderer->popPointLight();
+                    }
+                }
+
+                ImGui::Spacing();
+                ImGui::Separator();
+                ImGui::Spacing();
+                bool dirLightAngleChanged = false, dirLightColorChanged = false;
+                ImGui::DragFloat("Dir light angle:", &inputDirLightAngle, 0.01, 0.0f, pi);
+                glm::vec4 newLightDir = glm::vec4(cos(inputDirLightAngle) * cos(lightDirPhi),
+                    sin(inputDirLightAngle),
+                    -sin(lightDirPhi) * cos(inputDirLightAngle),
+                    0.0f);
+                dirLightAngleChanged = ImGui::IsItemEdited();
+                glm::vec4 newLightDirColor = Renderer::lightDirColor;
+                ImGui::ColorEdit3("Dir light color:", glm::value_ptr(newLightDirColor));
+                dirLightColorChanged = ImGui::IsItemEdited();
+                if (dirLightAngleChanged || dirLightColorChanged) renderer->updateDirectionalLight(&newLightDir, &newLightDirColor);
             }
             if (ImGui::CollapsingHeader("Scene")) {
                 static int modelNum = 0;
@@ -127,7 +142,6 @@ void UI::renderUI()
                 ImGui::SameLine(0.0f, spacing);
                 if (ImGui::ArrowButton("##right", ImGuiDir_Right)) { modelNum++; }
                 ImGui::PopButtonRepeat();
-                ImGui::SameLine();
                 if (modelNum >= Renderer::modelAssets.size()) modelNum = Renderer::modelAssets.size() - 1;
                 if (modelNum < 0) modelNum = 0;
                 ImGui::Text("%d", modelNum);
@@ -148,6 +162,23 @@ void UI::renderUI()
                     glm::vec3 inputScale = curModel->scale;
                     ImGui::InputFloat3("Scale XYZ", glm::value_ptr(inputScale));
                     curModel->scale = inputScale;
+                    if (ImGui::Button("Delete")) {
+                        renderer->removeModel(modelNum);
+                    }
+                }
+                ImGui::Spacing();
+                ImGui::Separator();
+                ImGui::Spacing();
+                static bool importAsSingleMesh = false;
+                static bool flipUVs = false;
+                static std::string fileName;
+                ImGui::InputText("Path to load model", &fileName);
+                ImGui::Checkbox("Import as single mesh", &importAsSingleMesh);
+                ImGui::SameLine();
+                ImGui::Checkbox("Flip UVs", &flipUVs);
+                ImGui::SameLine();
+                if (ImGui::Button("Load")) {
+                    renderer->addModel(fileName, importAsSingleMesh, flipUVs);
                 }
             }
             //Adjust point light params and position

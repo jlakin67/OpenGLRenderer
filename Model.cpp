@@ -1,8 +1,5 @@
 #include "Model.h"
 
-Model::Model() : directory(""), hasTexture{ true }, instanceBuf{ 0 }, 
-position(0.0f, 0.0f, 0.0f, 1.0f), yaw(0.0f), pitch(0.0f), roll(0.0f), scale(1.0f) {}
-
 Model::~Model()
 {
     for (Mesh& mesh : meshes) {
@@ -16,16 +13,28 @@ Model::~Model()
     glDeleteBuffers(1, &instanceBuf);
 }
 
-void Model::loadModel(std::string path, bool hasSingleMesh) {
-    directory = path.substr(0, path.find_last_of('/'));
+bool Model::loadModel(std::string path, bool hasSingleMesh, bool flipUVs) {
+    //directory = path.substr(0, path.find_last_of('/'));
+    size_t lastOf = path.find_last_of('/');
+    delimiter = "/";
+    if (lastOf == -1) {
+        lastOf = path.find_last_of('\\');
+        delimiter = "\\";
+    }
+    directory = path.substr(0, lastOf);
+    std::replace(directory.begin(), directory.end(), '\\', '/');
+    std::string newPath(path);
+    std::replace(newPath.begin(), newPath.end(), '\\', '/');
     Assimp::Importer importer;
     importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_POINT | aiPrimitiveType_LINE);
-    const aiScene* scene = importer.ReadFile(path, aiProcess_CalcTangentSpace | aiProcess_Triangulate
-        | aiProcess_GenSmoothNormals | aiProcess_PreTransformVertices | aiProcess_FlipUVs | aiProcess_SortByPType);
+    unsigned int importFlags = aiProcess_CalcTangentSpace | aiProcess_Triangulate
+        | aiProcess_GenSmoothNormals | aiProcess_PreTransformVertices | aiProcess_SortByPType;
+    if (flipUVs) importFlags = importFlags | aiProcess_FlipUVs;
+    const aiScene* scene = importer.ReadFile(newPath, importFlags);
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
     {
         std::cout << "ERROR::ASSIMP:: " << importer.GetErrorString() << std::endl;
-        return;
+        return false;
     }
     Mesh singleMesh;
     for (int i = 0; i < scene->mNumMeshes; i++) {
@@ -47,24 +56,23 @@ void Model::loadModel(std::string path, bool hasSingleMesh) {
                 loadTexture(aiTextureType_OPACITY, mesh, scene, ai_mesh->mMaterialIndex);
                 if (mesh.textures.empty()) {
                     mesh.hasTexCoords = false;
-                    hasTexture = false;
+                    mesh.hasTexture = false;
                 }
+                else mesh.hasTexture = true;
                 meshes.push_back(mesh);
             }
         }
         else {
             setUpMesh(ai_mesh, singleMesh, scene, ai_mesh->mMaterialIndex);
             //load textures for single mesh
-            if (hasTexture) {
-                loadTexture(aiTextureType_DIFFUSE, singleMesh, scene, ai_mesh->mMaterialIndex);
-                loadTexture(aiTextureType_SPECULAR, singleMesh, scene, ai_mesh->mMaterialIndex);
-                loadTexture(aiTextureType_AMBIENT, singleMesh, scene, ai_mesh->mMaterialIndex);
-                loadTexture(aiTextureType_NORMALS, singleMesh, scene, ai_mesh->mMaterialIndex);
-                loadTexture(aiTextureType_OPACITY, singleMesh, scene, ai_mesh->mMaterialIndex);
-                if (singleMesh.textures.empty()) {
-                    singleMesh.hasTexCoords = false;
-                    hasTexture = false;
-                }
+            loadTexture(aiTextureType_DIFFUSE, singleMesh, scene, ai_mesh->mMaterialIndex);
+            loadTexture(aiTextureType_SPECULAR, singleMesh, scene, ai_mesh->mMaterialIndex);
+            loadTexture(aiTextureType_AMBIENT, singleMesh, scene, ai_mesh->mMaterialIndex);
+            loadTexture(aiTextureType_NORMALS, singleMesh, scene, ai_mesh->mMaterialIndex);
+            loadTexture(aiTextureType_OPACITY, singleMesh, scene, ai_mesh->mMaterialIndex);
+            if (singleMesh.textures.empty()) {
+                singleMesh.hasTexCoords = false;
+                singleMesh.hasTexture = false;
             }
         
         }
@@ -73,6 +81,7 @@ void Model::loadModel(std::string path, bool hasSingleMesh) {
         setUpBuffers(singleMesh);
         meshes.push_back(singleMesh);
     }
+    return true;
 }
 
 void Model::loadTexture(aiTextureType type, Mesh& mesh, const aiScene* scene, unsigned int mMaterialIndex) {
@@ -81,7 +90,10 @@ void Model::loadTexture(aiTextureType type, Mesh& mesh, const aiScene* scene, un
         aiString ai_path;
         material->GetTexture(type, i, &ai_path);
         std::string path(ai_path.C_Str());
-        path = directory + "/" + path;
+        std::replace(path.begin(), path.end(), '\\', '/');
+        if (!(isalpha(path.at(0)) && path.at(1) == ':' && path.at(2) == '/')) {//not absolute path
+            path = directory + "/" + path;
+        }
         auto it = loadedTextures.find(path);
         if (it == loadedTextures.end()) {
             Texture texture;
@@ -103,8 +115,8 @@ void Model::loadTexture(aiTextureType type, Mesh& mesh, const aiScene* scene, un
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB8_ALPHA8, textureWidth, textureHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
                 stbi_image_free(image);
                 glGenerateMipmap(GL_TEXTURE_2D);
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
                 glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, maxAnisotropy);
@@ -126,11 +138,11 @@ void Model::setUpMesh(aiMesh* ai_mesh, Mesh& mesh, const aiScene* scene, unsigne
     aiVector3D* texCoords = ai_mesh->mTextureCoords[0];
     if (!texCoords) {
         mesh.hasTexCoords = false;
-        hasTexture = false;
+        mesh.hasTexture = false;
     }
     aiMaterial* material = scene->mMaterials[mMaterialIndex];
     float alpha = 1.0f;
-    aiColor3D inColor(0.2f, 0.2f, 0.2f);
+    aiColor3D inColor(0.6f, 0.6f, 0.6f);
     if (material) material->Get(AI_MATKEY_COLOR_DIFFUSE, inColor);
     if (material) material->Get(AI_MATKEY_OPACITY, alpha);
     mesh.color_diffuse = glm::vec4(inColor.r, inColor.g, inColor.b, alpha);
@@ -195,16 +207,24 @@ void Model::setUpBuffers(Mesh& mesh)
     glEnableVertexAttribArray(4);
     glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, bitangent));
     glBindVertexArray(0);
+    //glFinish();
+    mesh.numIndices = mesh.indices.size();
+    mesh.vertices.resize(0);
+    mesh.indices.resize(0);
 }
 
-void Mesh::draw(Shader& shader, bool useTexture = true, 
-    bool instanced, GLuint numInstances) {
+void Mesh::draw(Shader& shader, bool instanced, GLuint numInstances) {
     //must compile shader first
     //set model, view, projection uniforms before calling this function
     glBindVertexArray(vao);
     shader.useProgram();
+    shader.setBool("containsDiffuse", GL_FALSE);
+    shader.setBool("containsSpecular", GL_FALSE);
+    shader.setBool("containsAmbient", GL_FALSE);
+    shader.setBool("containsNormal", GL_FALSE);
+    shader.setBool("containsAlpha", GL_FALSE);
     shader.setFloat("specularHighlight", specularHighlight);
-    if (useTexture) {
+    if (hasTexture && hasTexCoords) {
         int diffuseNum = 0, specularNum = 0, ambientNum = 0, numTextures = 0, normalNum = 0;
         for (Texture& texture : textures) {
             std::string texName;
@@ -260,8 +280,8 @@ void Mesh::draw(Shader& shader, bool useTexture = true,
         shader.setVec4("color", glm::value_ptr(color_diffuse));
         shader.setVec3("specularColor", glm::value_ptr(color_specular));
     }
-    if (instanced) glDrawElementsInstanced(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0, numInstances);
-    else glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+    if (instanced) glDrawElementsInstanced(GL_TRIANGLES, numIndices, GL_UNSIGNED_INT, 0, numInstances);
+    else glDrawElements(GL_TRIANGLES, numIndices, GL_UNSIGNED_INT, 0);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, 0);
 }
@@ -278,7 +298,7 @@ void Model::draw(Shader& shader) {
     shader.setMat4("model", glm::value_ptr(model));
     shader.setBool("instanced", false);
     for (Mesh& mesh : meshes) {
-        mesh.draw(shader, hasTexture, false, 1);
+        mesh.draw(shader, false, 1);
     }
 }
 
@@ -324,5 +344,5 @@ void Model::drawInstances(Shader& shader, GLuint numInstances)
     model = glm::translate(model, glm::vec3(position));
     shader.setMat4("model", glm::value_ptr(model));
     shader.setBool("instanced", true);
-    meshes.at(0).draw(shader, hasTexture, true, numInstances);
+    meshes.at(0).draw(shader, true, numInstances);
 }

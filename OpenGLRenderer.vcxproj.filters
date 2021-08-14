@@ -78,6 +78,9 @@
     <ClCompile Include="PoissonDiskSamples.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\Documents\Libraries\imgui-master\imgui-master\misc\cpp\imgui_stdlib.cpp">
+      <Filter>Imgui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Axis.h">

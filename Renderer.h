@@ -62,6 +62,10 @@ public:
 	void updateViewUniformBuffer(glm::mat4& viewMatrix);
 	void updatePointLight(int index, glm::vec4* position, glm::vec4* color, glm::vec4* param);
 	void updateDirectionalLight(glm::vec4* newLightDir, glm::vec4* newLightDirColor);
+	void addModel(std::string path, bool importAsSingleMesh, bool flipUVs);
+	void removeModel(int index);
+	void pushPointLight();
+	void popPointLight();
 
 	void setupTestScene(); //old, debug scene used for previous versions of this code
 	void setup();

@@ -57,6 +57,8 @@ float pointLightPoissonDisk(samplerCubeArrayShadow shadowMaps, vec4 shadowTexCoo
 							  );
 			shadow +=
 			isShadow(shadowMaps, vec4(shadowTexCoord.xyz + diskRadius*length(poissonDisk[i])*(poissonDiskSphere[i] + jitter), shadowTexCoord.w), depth);
+			//shadow +=
+			//isShadow(shadowMaps, vec4(shadowTexCoord.xyz + diskRadius*length(poissonDisk[i])*(poissonDiskSphere[i]), shadowTexCoord.w), depth);
 	}
 	shadow /= float(numSamples);
 	return shadow;
@@ -82,11 +84,11 @@ vec4 specularExponent, vec3 position, vec4 param) {
 
 void main() {
 	vec2 texCoord = vec2(gl_FragCoord.x/windowSize.x, gl_FragCoord.y/windowSize.y);
-	vec4 normal = texture(gNormal, texCoord);
-	if (normal.a == 0) discard;
+	vec4 normal = normalize(texture(gNormal, texCoord));
+	if (normal.a == 0) discard; //a == 0 to indicate it's from a forward rendered screen pixel
 	vec4 position = texture(gPosition, texCoord);
 	if (position.a == 0) discard;
-	if (length(position - light_model[3]) > light_model[0][0]) discard;
+	float volumeScale = 1.0f - smoothstep((7.0/8.0)*light_model[0][0], light_model[0][0], length(position - light_model[3]));
 	vec4 albedo = vec4(texture(gAlbedo, texCoord).rgb, 1.0f);
 	vec4 specularExponent = texture(gSpecularExponent, texCoord);
 	float shadow = 1.0;
@@ -97,16 +99,16 @@ void main() {
 		float dfdy = dFdy(depth);
 		float depthSlope = sqrt(dfdx*dfdx + dfdy*dfdy);
 		float bias = 0.01*depthSlope + 0.015;
-		float diskRadius = 0.04f;
+		float diskRadius = 0.01f;
 		diskRadius = clamp(diskRadius, 0.0f, MAX_POINT_LIGHT_DISK_RADIUS);
-		int numSamples = int(mix(1, 81, pow( (diskRadius/MAX_POINT_LIGHT_DISK_RADIUS), 1.0f/2.2f) ));
+		int numSamples = int(mix(1, 32, pow( (diskRadius/MAX_POINT_LIGHT_DISK_RADIUS), 1.0f/2.2f) ));
 		bias += 0.75*diskRadius;
 		shadow = pointLightPoissonDisk(shadowMaps, shadowTexCoord, depth-bias, diskRadius, numSamples, position);
 	}
 	if (shadingMode == 0) {
 		vec3 finalColor = vec3(0,0,0);
 		vec4 param = lightParam[instanceID];
-		finalColor += shadow*pointLightShading(lightPos[instanceID].xyz, lightColor[instanceID], albedo, 
+		finalColor += volumeScale*shadow*pointLightShading(lightPos[instanceID].xyz, lightColor[instanceID], albedo, 
 		normal.xyz, specularExponent, position.xyz, param);
 		FragColor = vec4(finalColor, 1.0);
 	} else FragColor = vec4(0.2f, 0.2f, 0.2f, 1.0f);

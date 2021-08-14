@@ -23,18 +23,16 @@ uniform sampler2D texture_ambient0;
 uniform sampler2D texture_specular0;
 uniform sampler2D texture_normal0;
 uniform sampler2D texture_alpha;
-uniform vec4 color = vec4(0.2f,0.2f,0.2f,1.0f);
+uniform vec4 color = vec4(0.6f,0.6f,0.6f,1.0f);
 uniform float specularHighlight = 1.0f;
 uniform vec3 specularColor = vec3(1.0f, 1.0f, 1.0f);
 
 const mat3 TBN = mat3(tangent, bitangent, normal);
 
 void main() {
-	vec4 diffuseAlpha;
+	vec4 diffuseAlpha = color;
 	if (containsDiffuse) {
 		diffuseAlpha = texture(texture_diffuse0, texCoords);
-	} else {
-		diffuseAlpha = color;
 	}
 	if (containsAlpha) {
 		diffuseAlpha.a = texture(texture_alpha, texCoords).r;
