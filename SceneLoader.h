@@ -12,18 +12,24 @@ public:
 	static const std::string tokens[];
 	void loadScene(std::string scenePath);
 	std::vector<std::string> modelPaths;
+	std::vector<glm::bvec2> modelParams;
 	std::vector<glm::vec3> modelPositions;
 	std::vector<glm::vec3> modelScales;
 	std::vector<glm::vec3> modelAngles;
-	std::vector<glm::vec3> lightPos;
-	std::vector<glm::vec3> lightParam;
-	std::vector<glm::vec3> lightColor;
+	std::vector<glm::vec3> lightPositions;
+	std::vector<glm::vec3> lightParams;
+	std::vector<glm::vec3> lightColors;
 	glm::vec3 lightDirColor;
 	float lightDirTheta;
 private:
 	enum Tags {SCENE, MODEL, PATH, MODEL_PARAM, POSITION, 
 			   SCALE, ANGLE, POINT_LIGHT, COLOR, POINT_PARAM, DIR_LIGHT, NUM_TAGS, NONE };
-	void parse(std::string& sceneInfo, size_t& index, enum Tags nextState);
-	std::string parseTag(std::string& sceneInfo, size_t& index);
-
+	void parseScene(const std::string& sceneInfo, size_t& index, enum Tags state);
+	std::string parseTag(const std::string& sceneInfo, size_t& index);
+	void parsePath(const std::string& sceneInfo, size_t& index, enum Tags previous);
+	void parseParam(const std::string& sceneInfo, size_t& index, enum Tags previous);
+	void parsePosition(const std::string& sceneInfo, size_t& index, enum Tags previous);
+	void parseScale(const std::string& sceneInfo, size_t& index, enum Tags previous);
+	void parseAngle(const std::string& sceneInfo, size_t& index, enum Tags previous);
+	void parseColor(const std::string& sceneInfo, size_t& index, enum Tags previous);
 };
