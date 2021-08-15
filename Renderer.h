@@ -66,6 +66,7 @@ public:
 	void removeModel(int index);
 	void pushPointLight();
 	void popPointLight();
+	void updateNumShadowedPointLights(int num);
 
 	void setupTestScene(); //old, debug scene used for previous versions of this code
 	void setup();
@@ -78,6 +79,7 @@ public:
 	static glm::mat4 infiniteProj;
 
 	static int numPointLights;
+	static int numShadowedLights;
 	static glm::vec3 lightDir;
 	static glm::vec4 lightDirColor;
 	static std::vector<glm::vec4> lightPos;
@@ -126,6 +128,7 @@ private:
 
 	Shader lightVolumeShader;
 	GLuint lightVolumeModelBufID = 0;
+	std::vector<GLfloat> radii;
 	void setupLightVolumes();
 
 	GLuint cascadedShadowFramebufferID = 0;

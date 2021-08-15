@@ -115,6 +115,31 @@ void UI::renderUI()
                 }
 
                 ImGui::Spacing();
+
+                ImGui::AlignTextToFramePadding();
+                ImGui::Text("Num shadowed point lights:");
+                ImGui::SameLine();
+
+                bool numShadowedLightsIncreased = false, numShadowedLightsDecreased = false;
+                int numShadowedLightsInput = Renderer::numShadowedLights;
+                // Arrow buttons with Repeater
+                float spacing2 = ImGui::GetStyle().ItemInnerSpacing.x;
+                if (ImGui::Button("<-")) {
+                    numShadowedLightsInput--;
+                    numShadowedLightsDecreased = true;
+                }
+                ImGui::SameLine(0.0f, spacing2);
+                if (ImGui::Button("->")) {
+                    numShadowedLightsInput++;
+                    numShadowedLightsIncreased = true;
+                }
+                if (numShadowedLightsDecreased || numShadowedLightsIncreased) {
+                    renderer->updateNumShadowedPointLights(numShadowedLightsInput);
+                    //std::cout << "here\n";
+                }
+                ImGui::Text("%d", Renderer::numShadowedLights);
+
+                ImGui::Spacing();
                 ImGui::Separator();
                 ImGui::Spacing();
                 bool dirLightAngleChanged = false, dirLightColorChanged = false;
@@ -144,9 +169,16 @@ void UI::renderUI()
                 ImGui::PopButtonRepeat();
                 if (modelNum >= Renderer::modelAssets.size()) modelNum = Renderer::modelAssets.size() - 1;
                 if (modelNum < 0) modelNum = 0;
+
                 ImGui::Text("%d", modelNum);
 
                 if (!Renderer::modelAssets.empty()) {
+                    size_t numIndices = 0;
+                    for (int i = 0; i < Renderer::modelAssets.at(modelNum)->meshes.size(); i++) {
+                        numIndices += Renderer::modelAssets.at(modelNum)->meshes.at(i).numIndices;
+                    }
+                    ImGui::SameLine();
+                    ImGui::Text(" %s Indices: %u", Renderer::modelAssets.at(modelNum)->directory.c_str(), numIndices);
                     //ImGui::DragFloat3("Light pos:", glm::value_ptr(inputLightPos), 0.01f, -100.0f, 100.0f);
                     //ImGui::InputFloat3("input float3", vec4f);
                     Model* curModel = Renderer::modelAssets.at(modelNum);

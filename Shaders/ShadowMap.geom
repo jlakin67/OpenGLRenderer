@@ -19,6 +19,7 @@ layout (std140, binding = 2) uniform ShadowMatrices {
 
 in VS_GS_Interface {
 	vec2 texCoord;
+	//float texBias;
 } gs_in[];
 
 uniform int numShadowedLights;
@@ -37,6 +38,7 @@ void main() {
 			gs_out.worldPos = gl_in[j].gl_Position.xyz;
 			gs_out.texCoord = gs_in[j].texCoord;
 			gl_Position = shadowMatrices[6*i + gl_InvocationID]*gl_in[j].gl_Position;
+			//gl_Position -= gl_Position.w*gs_in[j].texBias;
 			gs_out.lightNum = i;
 			EmitVertex();
 		}

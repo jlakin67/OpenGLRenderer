@@ -127,6 +127,7 @@ void Renderer::setupLightVolumes() {
 	glGenBuffers(1, &lightVolumeModelBufID);
 	glBindBuffer(GL_ARRAY_BUFFER, lightVolumeModelBufID);
 	std::vector<glm::mat4> models;
+	radii.resize(maxPointLights);
 	for (int i = 0; i < lightPos.size(); i++) {
 		glm::mat4 model = glm::translate(glm::mat4(1.0), glm::vec3(lightPos.at(i)));
 		glm::vec4 color = lightColor.at(i);
@@ -137,6 +138,7 @@ void Renderer::setupLightVolumes() {
 		float radius =
 			(-linear + std::sqrtf(linear * linear - 4.0f * quadratic * (constant - (256.0f / 5.0f) * lightMax)))
 			/ (2.0f * quadratic);
+		radii.at(i) = radius;
 		model = glm::scale(model, glm::vec3(radius));
 		models.push_back(model);
 	}
@@ -283,11 +285,29 @@ void Renderer::setupPointShadowMaps() {
 	glReadBuffer(GL_NONE);
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, shadowCubemapArrayID, 0);
 	shadowMapShader.loadFile("Shaders/ShadowMap.vert", "Shaders/ShadowMap.frag", "Shaders/ShadowMap.geom");
-	glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), shadow_aspect, shadow_near, shadow_far);
+	/*
+	glm::mat4 shadowProj(0.0f);
+	shadowProj[0][0] = (1.0f) / (shadow_aspect * tanf(glm::radians(90.0f)/2.0f));
+	shadowProj[1][1] = (1.0f) / tanf(glm::radians(90.0f) / 2.0f);
+	shadowProj[2][2] = -(shadow_near + shadow_far) / (shadow_far - shadow_near);
+	shadowProj[2][3] = -(1.0f);
+	shadowProj[3][2] = -((2.0f) * shadow_far * shadow_near) / (shadow_far - shadow_near);
+	*/
+	/*
+	glm::mat4 shadowProj(0.0f);
+	shadowProj[0][0] = shadow_near;
+	shadowProj[1][1] = shadow_near;
+	shadowProj[2][2] = -(shadow_near + shadow_far);
+	shadowProj[2][3] = -(1.0f);
+	shadowProj[3][2] = -(shadow_far * shadow_near);
+	*/
+	//shadowProj = glm::ortho(-shadow_near, shadow_near,
+	//-shadow_near, shadow_near) * shadowProj;
 	shadowMapShader.useProgram();
 	shadowMapShader.setFloat("shadowFar", shadow_far);
-	shadowMapShader.setInt("numShadowedLights", numPointLights);
+	shadowMapShader.setInt("numShadowedLights", numShadowedLights);
 	for (int i = 0; i < numPointLights; i++) {
+		glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), shadow_aspect, shadow_near, radii.at(i));
 		shadowMatrices.push_back(shadowProj *
 			glm::lookAt(glm::vec3(lightPos.at(i)), glm::vec3(lightPos.at(i)) + glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
 		shadowMatrices.push_back(shadowProj *
@@ -392,7 +412,7 @@ void Renderer::setupLightDisplay() {
 	lightDisplayShader.setMat4("model", glm::value_ptr(lightDisplayModel));
 	glGenBuffers(1, &lightDisplayPositionBufID);
 	glBindBuffer(GL_ARRAY_BUFFER, lightDisplayPositionBufID);
-	glBufferData(GL_ARRAY_BUFFER, lightPos.size() * sizeof(glm::vec4),
+	glBufferData(GL_ARRAY_BUFFER, maxPointLights * sizeof(glm::vec4),
 		glm::value_ptr(lightPos[0]), GL_DYNAMIC_DRAW);
 	glEnableVertexAttribArray(9);
 	glVertexAttribPointer(9, 4, GL_FLOAT, GL_FALSE, sizeof(glm::vec4), (void*)0);
@@ -408,6 +428,7 @@ void Renderer::setupSunDisplay() {
 
 void Renderer::setupTestSceneLights() { //old
 	numPointLights = 2;
+	numShadowedLights = 2;
 	lightPos.push_back(glm::vec4(3.0, 3.0, 3.0, 1.0));
 	lightPos.push_back(glm::vec4(0.0, 3.0, -1.0, 1.0));
 	lightColor.push_back(glm::vec4(0.6, 0.6, 0.6, 1.0));
@@ -902,26 +923,29 @@ void Renderer::updatePointLight(int index, glm::vec4* position, glm::vec4* color
 	float radius =
 		(-linear + std::sqrtf(linear * linear - 4.0f * quadratic * (constant - (256.0f / 5.0f) * lightMax)))
 		/ (2.0f * quadratic);
+	radii.at(index) = radius;
 	lightVolumeModel = glm::scale(lightVolumeModel, glm::vec3(radius));
 	glBindBuffer(GL_ARRAY_BUFFER, lightVolumeModelBufID);
 	glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(glm::mat4), sizeof(glm::mat4), glm::value_ptr(lightVolumeModel));
 	if (position) {
-		glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), shadow_aspect, shadow_near, shadow_far);
-		shadowMatrices.at(6 * index) = (shadowProj *
-			glm::lookAt(glm::vec3(lightPos.at(index)), glm::vec3(lightPos.at(index)) + glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
-		shadowMatrices.at(6 * index + 1) = (shadowProj *
-			glm::lookAt(glm::vec3(lightPos.at(index)), glm::vec3(lightPos.at(index)) + glm::vec3(-1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
-		shadowMatrices.at(6 * index + 2) = (shadowProj *
-			glm::lookAt(glm::vec3(lightPos.at(index)), glm::vec3(lightPos.at(index)) + glm::vec3(0.0, 1.0, 0.0), glm::vec3(0.0, 0.0, 1.0)));
-		shadowMatrices.at(6 * index + 3) = (shadowProj *
-			glm::lookAt(glm::vec3(lightPos.at(index)), glm::vec3(lightPos.at(index)) + glm::vec3(0.0, -1.0, 0.0), glm::vec3(0.0, 0.0, -1.0)));
-		shadowMatrices.at(6 * index + 4) = (shadowProj *
-			glm::lookAt(glm::vec3(lightPos.at(index)), glm::vec3(lightPos.at(index)) + glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, -1.0, 0.0)));
-		shadowMatrices.at(6 * index + 5) = (shadowProj *
-			glm::lookAt(glm::vec3(lightPos.at(index)), glm::vec3(lightPos.at(index)) + glm::vec3(0.0, 0.0, -1.0), glm::vec3(0.0, -1.0, 0.0)));
-		glBindBuffer(GL_UNIFORM_BUFFER, uboIDs[UBO_SHADOW_MATRICES]);
-		glBufferSubData(GL_UNIFORM_BUFFER, 6 * index * sizeof(glm::mat4), 6 * sizeof(glm::mat4), glm::value_ptr(shadowMatrices[6 * index]));
-		glBindBuffer(GL_UNIFORM_BUFFER, 0);
+		if (index < numShadowedLights) {
+			glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), shadow_aspect, shadow_near, radii.at(index));
+			shadowMatrices.at(6 * index) = (shadowProj *
+				glm::lookAt(glm::vec3(lightPos.at(index)), glm::vec3(lightPos.at(index)) + glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
+			shadowMatrices.at(6 * index + 1) = (shadowProj *
+				glm::lookAt(glm::vec3(lightPos.at(index)), glm::vec3(lightPos.at(index)) + glm::vec3(-1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
+			shadowMatrices.at(6 * index + 2) = (shadowProj *
+				glm::lookAt(glm::vec3(lightPos.at(index)), glm::vec3(lightPos.at(index)) + glm::vec3(0.0, 1.0, 0.0), glm::vec3(0.0, 0.0, 1.0)));
+			shadowMatrices.at(6 * index + 3) = (shadowProj *
+				glm::lookAt(glm::vec3(lightPos.at(index)), glm::vec3(lightPos.at(index)) + glm::vec3(0.0, -1.0, 0.0), glm::vec3(0.0, 0.0, -1.0)));
+			shadowMatrices.at(6 * index + 4) = (shadowProj *
+				glm::lookAt(glm::vec3(lightPos.at(index)), glm::vec3(lightPos.at(index)) + glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, -1.0, 0.0)));
+			shadowMatrices.at(6 * index + 5) = (shadowProj *
+				glm::lookAt(glm::vec3(lightPos.at(index)), glm::vec3(lightPos.at(index)) + glm::vec3(0.0, 0.0, -1.0), glm::vec3(0.0, -1.0, 0.0)));
+			glBindBuffer(GL_UNIFORM_BUFFER, uboIDs[UBO_SHADOW_MATRICES]);
+			glBufferSubData(GL_UNIFORM_BUFFER, 6 * index * sizeof(glm::mat4), 6 * sizeof(glm::mat4), glm::value_ptr(shadowMatrices[6 * index]));
+			glBindBuffer(GL_UNIFORM_BUFFER, 0);
+		}
 		glBindBuffer(GL_ARRAY_BUFFER, lightDisplayPositionBufID);
 		glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(glm::vec4), sizeof(glm::vec4), glm::value_ptr(*position));
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -960,18 +984,18 @@ void Renderer::pushPointLight()
 		lightPos.push_back(glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
 		lightColor.push_back(glm::vec4(0.5f, 0.5f, 0.5f, 1.0f));
 		lightParam.push_back(glm::vec4(lightConstant, lightLinear, lightQuadratic, specularExponent));
-		shadowMapShader.useProgram();
-		shadowMapShader.setInt("numShadowedLights", std::min(numPointLights, maxShadowedPointLights));
 		glBindBuffer(GL_UNIFORM_BUFFER, uboIDs[UBO_LIGHTS]);
 		glm::ivec4 paddedNumLights(numPointLights, 0, 0, 0);
 		glBufferSubData(GL_UNIFORM_BUFFER, offsetof(LightsUniformBlock, numLights),
 			sizeof(glm::ivec4), glm::value_ptr(paddedNumLights));
-		shadowMatrices.push_back(glm::mat4(1.0f));
-		shadowMatrices.push_back(glm::mat4(1.0f));
-		shadowMatrices.push_back(glm::mat4(1.0f));
-		shadowMatrices.push_back(glm::mat4(1.0f));
-		shadowMatrices.push_back(glm::mat4(1.0f));
-		shadowMatrices.push_back(glm::mat4(1.0f));
+		if (numPointLights <= numShadowedLights) {
+			shadowMatrices.push_back(glm::mat4(1.0f));
+			shadowMatrices.push_back(glm::mat4(1.0f));
+			shadowMatrices.push_back(glm::mat4(1.0f));
+			shadowMatrices.push_back(glm::mat4(1.0f));
+			shadowMatrices.push_back(glm::mat4(1.0f));
+			shadowMatrices.push_back(glm::mat4(1.0f));
+		}
 		updatePointLight(numPointLights - 1, &lightPos.at(numPointLights - 1),
 			&lightColor.at(numPointLights - 1), &lightParam.at(numPointLights - 1));
 	}
@@ -980,17 +1004,52 @@ void Renderer::pushPointLight()
 void Renderer::popPointLight()
 {
 	numPointLights--;
+	glBindBuffer(GL_UNIFORM_BUFFER, uboIDs[UBO_LIGHTS]);
+	glm::ivec4 paddedNumLights(numPointLights, 0, 0, 0);
+	glBufferSubData(GL_UNIFORM_BUFFER, offsetof(LightsUniformBlock, numLights),
+		sizeof(glm::ivec4), glm::value_ptr(paddedNumLights));
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 	lightPos.pop_back();
 	lightColor.pop_back();
 	lightParam.pop_back();
-	shadowMapShader.useProgram();
-	shadowMapShader.setInt("numShadowedLights", std::min(numPointLights, maxShadowedPointLights));
-	shadowMatrices.pop_back();
-	shadowMatrices.pop_back();
-	shadowMatrices.pop_back();
-	shadowMatrices.pop_back();
-	shadowMatrices.pop_back();
-	shadowMatrices.pop_back();
+	if (numPointLights < numShadowedLights) {
+		numShadowedLights--;
+		shadowMapShader.useProgram();
+		shadowMapShader.setInt("numShadowedLights", std::min(numShadowedLights, maxShadowedPointLights));
+		shadowMatrices.pop_back();
+		shadowMatrices.pop_back();
+		shadowMatrices.pop_back();
+		shadowMatrices.pop_back();
+		shadowMatrices.pop_back();
+		shadowMatrices.pop_back();
+	}
+}
+
+void Renderer::updateNumShadowedPointLights(int num) {
+	int oldNumShadowedLights = numShadowedLights;
+	numShadowedLights = std::min(num, numPointLights);
+	if (numShadowedLights > oldNumShadowedLights) {
+		shadowMatrices.push_back(glm::mat4(1.0f));
+		shadowMatrices.push_back(glm::mat4(1.0f));
+		shadowMatrices.push_back(glm::mat4(1.0f));
+		shadowMatrices.push_back(glm::mat4(1.0f));
+		shadowMatrices.push_back(glm::mat4(1.0f));
+		shadowMatrices.push_back(glm::mat4(1.0f));
+		updatePointLight(numPointLights - 1, &lightPos.at(numPointLights - 1),
+			&lightColor.at(numPointLights - 1), &lightParam.at(numPointLights - 1));
+		shadowMapShader.useProgram();
+		shadowMapShader.setInt("numShadowedLights", std::min(numShadowedLights, maxShadowedPointLights));
+	}
+	else if (numShadowedLights < oldNumShadowedLights) {
+		shadowMatrices.pop_back();
+		shadowMatrices.pop_back();
+		shadowMatrices.pop_back();
+		shadowMatrices.pop_back();
+		shadowMatrices.pop_back();
+		shadowMatrices.pop_back();
+		shadowMapShader.useProgram();
+		shadowMapShader.setInt("numShadowedLights", std::min(numShadowedLights, maxShadowedPointLights));
+	}
 }
 
 void Renderer::setupTestScene() { //old
@@ -1338,6 +1397,7 @@ int Renderer::frustum_outline_mode = Renderer::NO_FRUSTUM_OUTLINE;
 int Renderer::cameraMode = 0;
 
 int Renderer::numPointLights = 0;
+int Renderer::numShadowedLights = 0;
 glm::vec4 Renderer::lightDirColor;
 glm::vec3 Renderer::lightDir;
 std::vector<glm::vec4> Renderer::lightPos;
