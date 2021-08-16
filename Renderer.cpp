@@ -338,7 +338,7 @@ void generateRandom3DTexture(float* arr, size_t len, float a, float b) {
 }
 
 void Renderer::setupRandomTexture()
-{ //map world position to random angle so there is stability between frames
+{ //map world position to random angle so there is no flickering during camera movement
 	generateRandom3DTexture(randomAngleTexture, randomTextureSize, 0.0f, 2 * pi);
 	glGenTextures(1, &randomTextureID);
 	glBindTexture(GL_TEXTURE_3D, randomTextureID);
@@ -380,8 +380,10 @@ void Renderer::setupDeferredFramebuffer() {
 		}
 		glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, deferredFramebufferWidth, deferredFramebufferHeight,
 			0, format, type, NULL);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D,
 			colorTextureID, 0);
 		deferredColorTextureIDs.push_back(colorTextureID);
@@ -426,7 +428,7 @@ void Renderer::setupSunDisplay() {
 	sunShader.loadFile("Shaders/Sun.vert", "Shaders/Sun.frag");
 }
 
-void Renderer::setupTestSceneLights() { //old
+void Renderer::setupTestSceneLights() {
 	numPointLights = 2;
 	numShadowedLights = 2;
 	lightPos.push_back(glm::vec4(3.0, 3.0, 3.0, 1.0));
@@ -439,7 +441,7 @@ void Renderer::setupTestSceneLights() { //old
 		sin(lightDirTheta),
 		-sin(lightDirPhi) * cos(lightDirTheta),
 		0.0f);
-	lightDirColor = glm::vec4(0.001f, 0.001f, 0.001f, 1.0f);
+	lightDirColor = glm::vec4(0.2f, 0.2f, 0.2f, 1.0f);
 	setupLightVolumes();
 }
 
@@ -451,8 +453,10 @@ void Renderer::setupPostprocessFramebuffer()
 	glGenTextures(1, &postprocessColorTextureID);
 	glBindTexture(GL_TEXTURE_2D, postprocessColorTextureID);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, postprocessColorTextureID, 0);
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glGenRenderbuffers(1, &postprocessRenderbufferID);
@@ -550,12 +554,12 @@ void Renderer::setupModelShader()
 	modelShader.useProgram();
 }
 
-void Renderer::setupTestSceneModel() { //old
+void Renderer::setupTestSceneModel() {
 	Model* testModel = new Model;
-	//testModel->loadModel("C:/Users/juice/Documents/Graphics/Models/backpack/backpack.obj");
-	testModel->loadModel("C:\\Users\\juice\\Documents\\Graphics\\Models\\backpack\\backpack.obj");
-	testModel->scale = glm::vec3(1.0f, 1.0f, 1.0f);
-	testModel->position = glm::vec4(0.0f, 2.0f, 3.0f, 1.0f);
+	testModel->loadModel("C:/Users/juice/Documents/Graphics/Models/sponza/sponza.obj", false, false);
+	//testModel->loadModel("C:\\Users\\juice\\Documents\\Graphics\\Models\\backpack\\backpack.obj");
+	testModel->scale = glm::vec3(0.01f, 0.01f, 0.01f);
+	testModel->position = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 	modelAssets.push_back(testModel);
 }
 
@@ -950,6 +954,7 @@ void Renderer::updatePointLight(int index, glm::vec4* position, glm::vec4* color
 		glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(glm::vec4), sizeof(glm::vec4), glm::value_ptr(*position));
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 	}
+	renderPointShadowMaps();
 }
 
 void Renderer::updateDirectionalLight(glm::vec4* newLightDir, glm::vec4* newLightDirColor)
@@ -968,6 +973,7 @@ void Renderer::addModel(std::string path, bool importAsSingleMesh, bool flipUVs)
 	if (model->loadModel(path, importAsSingleMesh, flipUVs))
 		modelAssets.push_back(model);
 	else delete model;
+	renderPointShadowMaps();
 }
 
 void Renderer::removeModel(int index)
@@ -975,6 +981,7 @@ void Renderer::removeModel(int index)
 	assert(index >= 0 && index < modelAssets.size());
 	delete modelAssets.at(index);
 	modelAssets.erase(modelAssets.begin() + index);
+	renderPointShadowMaps();
 }
 
 void Renderer::pushPointLight()
@@ -1022,6 +1029,7 @@ void Renderer::popPointLight()
 		shadowMatrices.pop_back();
 		shadowMatrices.pop_back();
 		shadowMatrices.pop_back();
+		renderPointShadowMaps();
 	}
 }
 
@@ -1039,6 +1047,7 @@ void Renderer::updateNumShadowedPointLights(int num) {
 			&lightColor.at(numPointLights - 1), &lightParam.at(numPointLights - 1));
 		shadowMapShader.useProgram();
 		shadowMapShader.setInt("numShadowedLights", std::min(numShadowedLights, maxShadowedPointLights));
+		renderPointShadowMaps();
 	}
 	else if (numShadowedLights < oldNumShadowedLights) {
 		shadowMatrices.pop_back();
@@ -1049,6 +1058,7 @@ void Renderer::updateNumShadowedPointLights(int num) {
 		shadowMatrices.pop_back();
 		shadowMapShader.useProgram();
 		shadowMapShader.setInt("numShadowedLights", std::min(numShadowedLights, maxShadowedPointLights));
+		renderPointShadowMaps();
 	}
 }
 
@@ -1094,6 +1104,7 @@ void Renderer::setup()
 	setupShadowTesting();
 	setupSunDisplay();
 	setupWireframeShader();
+	renderPointShadowMaps();
 }
 
 void Renderer::renderTestScene() { //old
@@ -1267,7 +1278,7 @@ void Renderer::render() {
 		if (render_mode == RENDER_DEFAULT) {
 			renderShadowMapCascades();
 			fillShadowCascadeBuffer();
-			renderPointShadowMaps();
+			//renderPointShadowMaps();
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 			glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
 			glBindFramebuffer(GL_FRAMEBUFFER, postprocessFramebufferID);
@@ -1292,7 +1303,7 @@ void Renderer::render() {
 		else if (render_mode == RENDER_SHADOW) {
 			renderShadowMapCascades();
 			fillShadowCascadeBuffer();
-			renderPointShadowMaps();
+			//renderPointShadowMaps();
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 			glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
 			glDisable(GL_DEPTH_TEST);

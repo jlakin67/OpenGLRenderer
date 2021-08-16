@@ -101,7 +101,7 @@ void main() {
 		float bias = 0.01*depthSlope + 0.015;
 		float diskRadius = 0.01f;
 		diskRadius = clamp(diskRadius, 0.0f, MAX_POINT_LIGHT_DISK_RADIUS);
-		int numSamples = int(mix(1, 32, pow( (diskRadius/MAX_POINT_LIGHT_DISK_RADIUS), 1.0f/2.2f) ));
+		int numSamples = int(mix(1, 81, pow( (diskRadius/MAX_POINT_LIGHT_DISK_RADIUS), 1.0f/2.2f) ));
 		bias += 0.75*diskRadius;
 		shadow = pointLightPoissonDisk(shadowMaps, shadowTexCoord, depth-bias, diskRadius, numSamples, position);
 	}

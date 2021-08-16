@@ -181,19 +181,26 @@ void UI::renderUI()
                     ImGui::Text(" %s Indices: %u", Renderer::modelAssets.at(modelNum)->directory.c_str(), numIndices);
                     //ImGui::DragFloat3("Light pos:", glm::value_ptr(inputLightPos), 0.01f, -100.0f, 100.0f);
                     //ImGui::InputFloat3("input float3", vec4f);
+                    bool modelAngleChanged = false;
+                    bool modelScaleChanged = false;
+                    bool modelPositionChanged = false;
                     Model* curModel = Renderer::modelAssets.at(modelNum);
                     glm::vec3 ypr(curModel->yaw, curModel->pitch, curModel->roll);
                     ImGui::DragFloat3("Pitch, roll, yaw", glm::value_ptr(ypr), 0.01f, 0.0f, 2*pi);
+                    modelAngleChanged = ImGui::IsItemEdited();
                     curModel->pitch = ypr.y;
                     curModel->yaw = ypr.x;
                     curModel->roll = ypr.z;
                     glm::vec3 inputPosition = curModel->position;
                     //ImGui::DragFloat3("Position XYZ", glm::value_ptr(inputPosition), 0.1f, -100.0f, 100.0f);
                     ImGui::InputFloat3("Position XYZ", glm::value_ptr(inputPosition));
+                    modelPositionChanged = ImGui::IsItemEdited();
                     curModel->position = glm::vec4(inputPosition, 1.0f);
                     glm::vec3 inputScale = curModel->scale;
                     ImGui::InputFloat3("Scale XYZ", glm::value_ptr(inputScale));
+                    modelScaleChanged = ImGui::IsItemEdited();
                     curModel->scale = inputScale;
+                    if (modelAngleChanged || modelScaleChanged || modelPositionChanged) renderer->updateStaticPointShadowMap();
                     if (ImGui::Button("Delete")) {
                         renderer->removeModel(modelNum);
                     }

@@ -67,6 +67,7 @@ public:
 	void pushPointLight();
 	void popPointLight();
 	void updateNumShadowedPointLights(int num);
+	void updateStaticPointShadowMap() { renderPointShadowMaps(); }
 
 	void setupTestScene(); //old, debug scene used for previous versions of this code
 	void setup();
@@ -174,7 +175,7 @@ private:
 	Shader sunShader;
 	void setupSunDisplay();
 
-	void setupTestSceneLights(); //old
+	void setupTestSceneLights();
 
 	Shader shadowTestShader;
 	ShadowCascadeTest shadowCascadeTest;
@@ -199,7 +200,7 @@ private:
 	Shader modelShader;
 	void setupModelShader();
 
-	void setupTestSceneModel(); //old
+	void setupTestSceneModel();
 
 	void renderTestSceneDeferredPass(); //old
 	void renderDeferredPass();

@@ -111,6 +111,22 @@ void SceneLoader::parseParam(const std::string& sceneInfo, size_t& index, enum T
 	}
 }
 
+void SceneLoader::parseScale(const std::string& sceneInfo, size_t& index, enum Tags previous)
+{
+}
+
+void SceneLoader::parseAngle(const std::string& sceneInfo, size_t& index, enum Tags previous)
+{
+}
+
+void SceneLoader::parseColor(const std::string& sceneInfo, size_t& index, enum Tags previous)
+{
+}
+
+void SceneLoader::parsePosition(const std::string& sceneInfo, size_t& index, enum Tags previous)
+{
+}
+
 void SceneLoader::parsePath(const std::string& sceneInfo, size_t& index, enum Tags previous)
 {
 	if (previous == MODEL) {
