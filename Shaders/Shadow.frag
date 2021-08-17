@@ -18,11 +18,8 @@ uniform mat4 cascadedShadowMatrices[5];
 uniform sampler3D noise;
 uniform int screenWidth = 1600;
 uniform int screenHeight = 900;
-uniform int noiseSize = 64;
 
 in vec2 texCoord;
-
-vec2 noiseTexScale  = vec2(float(screenWidth)/float(noiseSize), float(screenHeight)/float(noiseSize));
 
 layout (std140, binding = 1) uniform Lights {
 	int numLights;
@@ -216,7 +213,7 @@ float pointLightPoissonDisk(samplerCubeArrayShadow shadowMaps, vec4 shadowTexCoo
 
 	for (int i = 0; i < numSamples; i++) {
 			vec2 randomAngle = texture(noise, worldPosition.xyz).xy;
-			vec3 jitter = vec3(cos(randomAngle.x)*sin(randomAngle.y),
+			vec3 jitter = diskRadius*vec3(cos(randomAngle.x)*sin(randomAngle.y),
 							   sin(randomAngle.x)*sin(randomAngle.y),
 							   (randomAngle.y)
 							  );

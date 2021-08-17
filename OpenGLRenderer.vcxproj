@@ -228,6 +228,7 @@
     <None Include="Shaders\ShadowMapCascade.vert" />
     <None Include="Shaders\Skybox.frag" />
     <None Include="Shaders\Skybox.vert" />
+    <None Include="Shaders\SSAO.frag" />
     <None Include="Shaders\Sun.frag" />
     <None Include="Shaders\Sun.vert" />
     <None Include="Shaders\Wireframe.frag" />

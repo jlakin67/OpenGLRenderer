@@ -41,7 +41,7 @@ constexpr GLfloat maxAnisotropy = 16.0f;
 extern const GLfloat cube_vertices[108];
 extern const GLfloat quadNormal[3];
 constexpr GLint randomTextureSize = 64;
-extern GLfloat randomAngleTexture[randomTextureSize * randomTextureSize * randomTextureSize];
+extern GLfloat randomAngleTexture[2*randomTextureSize * randomTextureSize * randomTextureSize];
 constexpr int maxSamples = 81;
 extern GLfloat poissonDisk[4 * maxSamples];
 extern GLfloat poissonDiskDir[4 * maxSamples];

@@ -45,7 +45,7 @@ void UI::renderUI()
             Renderer* renderer = Renderer::getInstance();
             if (ImGui::CollapsingHeader("Render/Camera")) {
                 const char* items[] = { "Default", "World position buffer", "Normal buffer", "Albedo", "Depth buffer",
-                    "Specularity", "Shadows", "Cascade split depths", "Wireframe" };
+                    "Specularity", "Shadows", "Cascade split depths", "Wireframe", "SSAO"};
                 ImGui::Combo("Display buffer", &Renderer::render_mode, items, IM_ARRAYSIZE(items));
                 ImGui::Separator();
                 ImGui::Text("Skybox to render:");
@@ -63,6 +63,16 @@ void UI::renderUI()
                 ImGui::Spacing();
                 ImGui::RadioButton("1", &Renderer::cameraMode, 0); ImGui::SameLine();
                 ImGui::RadioButton("2", &Renderer::cameraMode, 1);
+                ImGui::Spacing();
+                int numSSAOSamplesInput = Renderer::numSSAOSamples;
+                float SSAOSampleRadiusInput = Renderer::SSAOSampleRadius;
+                bool numSSAOSamplesChanged = false, SSAOSampleRadiusChanged = false;
+                ImGui::DragInt("SSAO Samples:", &numSSAOSamplesInput, 1, 16, maxSamples);
+                numSSAOSamplesChanged = ImGui::IsItemEdited();
+                ImGui::DragFloat("SSAO radius:", &SSAOSampleRadiusInput, 0.01f, 0.05f, 2.5f);
+                SSAOSampleRadiusChanged = ImGui::IsItemEdited();
+                if (numSSAOSamplesChanged || SSAOSampleRadiusChanged) 
+                    renderer->updateSSAOParameters(numSSAOSamplesInput, SSAOSampleRadiusInput);
             }
             if (ImGui::CollapsingHeader("Lights")) {
                 static int lightNum = 0;

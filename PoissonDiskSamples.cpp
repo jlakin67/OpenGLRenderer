@@ -1,6 +1,6 @@
 #include "Renderer_constants.h"
 
-GLfloat randomAngleTexture[randomTextureSize * randomTextureSize * randomTextureSize];
+GLfloat randomAngleTexture[2*randomTextureSize * randomTextureSize * randomTextureSize];
 
 GLfloat poissonDisk[4 * maxSamples] = {
 0.913129, 0.016017, 0.000000, 0.000000, 0.562511, 0.563222, 0.000000, 0.000000, 0.827180, 0.163682, 0.000000, 0.000000, 0.309937, 0.032048, 0.000000, 0.000000, 0.558858, 0.027377,

@@ -51,7 +51,7 @@ float pointLightPoissonDisk(samplerCubeArrayShadow shadowMaps, vec4 shadowTexCoo
 
 	for (int i = 0; i < numSamples; i++) {
 			vec2 randomAngle = texture(noise, worldPosition.xyz).xy;
-			vec3 jitter = vec3(cos(randomAngle.x)*sin(randomAngle.y),
+			vec3 jitter = diskRadius*vec3(cos(randomAngle.x)*sin(randomAngle.y),
 							   sin(randomAngle.x)*sin(randomAngle.y),
 							   (randomAngle.y)
 							  );

@@ -274,5 +274,8 @@
     <None Include="Shaders\Deferred_lv_general.frag">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="Shaders\SSAO.frag">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

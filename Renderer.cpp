@@ -327,23 +327,24 @@ void Renderer::setupPointShadowMaps() {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void generateRandom3DTexture(float* arr, size_t len, float a, float b) {
+void generateRandom3DTexture(float* arr, size_t len) { //uniform over a sphere
 	//auto seed = std::chrono::system_clock::now().time_since_epoch().count();
 	int seed = 984243;
 	std::default_random_engine engine(seed);
-	std::uniform_real_distribution<float> distribution(a, b);
+	std::uniform_real_distribution<float> distribution(0.0f, 1.0f);
 	for (int i = 0; i < len * len * len; i++) {
-		arr[i] = distribution(engine);
+		arr[2*i] = 2 * pi * distribution(engine);
+		arr[2 * i + 1] = glm::acos(1.0f - 2 * distribution(engine));
 	}
 }
 
 void Renderer::setupRandomTexture()
 { //map world position to random angle so there is no flickering during camera movement
-	generateRandom3DTexture(randomAngleTexture, randomTextureSize, 0.0f, 2 * pi);
+	generateRandom3DTexture(randomAngleTexture, randomTextureSize);
 	glGenTextures(1, &randomTextureID);
 	glBindTexture(GL_TEXTURE_3D, randomTextureID);
-	glTexImage3D(GL_TEXTURE_3D, 0, GL_R16F, randomTextureSize, randomTextureSize, randomTextureSize, 0,
-		GL_RED, GL_FLOAT, randomAngleTexture);
+	glTexImage3D(GL_TEXTURE_3D, 0, GL_RG16F, randomTextureSize, randomTextureSize, randomTextureSize, 0,
+		GL_RG, GL_FLOAT, randomAngleTexture);
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -374,7 +375,7 @@ void Renderer::setupDeferredFramebuffer() {
 		GLint format = GL_RGBA;
 		if (internalFormat == GL_RGBA16F) type = GL_FLOAT;
 		else if (internalFormat == GL_RGBA) type = GL_UNSIGNED_BYTE;
-		else if (internalFormat == GL_R16F || internalFormat == GL_R32F) {
+		else if (internalFormat == GL_R16F || internalFormat == GL_R32F || internalFormat == GL_R8) {
 			type = GL_FLOAT;
 			format = GL_RED;
 		}
@@ -402,6 +403,46 @@ void Renderer::setupDeferredFramebuffer() {
 		exit(EXIT_FAILURE);
 	}
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void Renderer::setupSSAO()
+{
+	glGenFramebuffers(1, &SSAOFramebufferID);
+	glBindFramebuffer(GL_FRAMEBUFFER, SSAOFramebufferID);
+	glGenTextures(1, &SSAOTextureID);
+	glBindTexture(GL_TEXTURE_2D, SSAOTextureID);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, SCR_WIDTH, SCR_HEIGHT, 0, GL_RED, GL_FLOAT, NULL);
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, SSAOTextureID, 0);
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+		std::cout << "ERROR::FRAMEBUFFER: SSAO framebuffer is not complete!" << std::endl;
+		exit(EXIT_FAILURE);
+	}
+	glGenFramebuffers(1, &SSAOBlurFramebufferID);
+	glBindFramebuffer(GL_FRAMEBUFFER, SSAOBlurFramebufferID);
+	glGenTextures(1, &SSAOBlurTextureID);
+	glBindTexture(GL_TEXTURE_2D, SSAOBlurTextureID);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, SCR_WIDTH, SCR_HEIGHT, 0, GL_RED, GL_FLOAT, NULL);
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, SSAOBlurTextureID, 0);
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+		std::cout << "ERROR::FRAMEBUFFER: SSAO blur framebuffer is not complete!" << std::endl;
+		exit(EXIT_FAILURE);
+	}
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	SSAOShader.loadFile("Shaders/Quad_framebuffer.vert", "Shaders/SSAO.frag");
+	SSAOShader.useProgram();
+	SSAOShader.setInt("gDepth", 0);
+	SSAOShader.setInt("gPosition", 1);
+	SSAOShader.setInt("gNormal", 2);
+	SSAOShader.setInt("noise", 3);
+	SSAOShader.setInt("numSamples", numSSAOSamples);
+	SSAOShader.setFloat("radius", SSAOSampleRadius);
 }
 
 
@@ -777,6 +818,26 @@ void Renderer::renderPointShadowMaps()
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
+void Renderer::renderSSAO() {
+	glBindFramebuffer(GL_FRAMEBUFFER, SSAOFramebufferID);
+	SSAOShader.useProgram();
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, deferredColorTextureIDs.at(0)); //gDepth
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, deferredColorTextureIDs.at(1)); //gPosition
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, deferredColorTextureIDs.at(2)); //gNormal
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_3D, randomTextureID);
+	glBindVertexArray(quadVAO);
+	glDisable(GL_DEPTH_TEST);
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+	glEnable(GL_DEPTH_TEST);
+	glBindVertexArray(0);
+	glActiveTexture(GL_TEXTURE0);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
 void Renderer::renderLightingPass() {
 	glBindFramebuffer(GL_FRAMEBUFFER, postprocessFramebufferID);
 	//separate lighting passes for deferred
@@ -1062,6 +1123,14 @@ void Renderer::updateNumShadowedPointLights(int num) {
 	}
 }
 
+void Renderer::updateSSAOParameters(int numSamples, float radius) {
+	numSSAOSamples = numSamples;
+	SSAOSampleRadius = radius;
+	SSAOShader.useProgram();
+	SSAOShader.setInt("numSamples", numSSAOSamples);
+	SSAOShader.setFloat("radius", SSAOSampleRadius);
+}
+
 void Renderer::setupTestScene() { //old
 	setupPlaneMesh();
 	setupCubeMesh();
@@ -1099,6 +1168,7 @@ void Renderer::setup()
 	setupPointShadowMaps();
 	setupDeferredFramebuffer();
 	setupPostprocessFramebuffer();
+	setupSSAO();
 	setupTestAxis();
 	setupLightDisplay();
 	setupShadowTesting();
@@ -1276,6 +1346,7 @@ void Renderer::render() {
 	else {
 		renderDeferredPass();
 		if (render_mode == RENDER_DEFAULT) {
+			renderSSAO();
 			renderShadowMapCascades();
 			fillShadowCascadeBuffer();
 			//renderPointShadowMaps();
@@ -1361,7 +1432,7 @@ void Renderer::render() {
 			quadShader.useProgram();
 			quadShader.setInt("renderMode", render_mode);
 			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, deferredColorTextureIDs.at(3));
+			glBindTexture(GL_TEXTURE_2D, SSAOTextureID);
 			glBindVertexArray(quadVAO);
 			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 			glBindVertexArray(0);
@@ -1384,6 +1455,18 @@ void Renderer::render() {
 			quadShader.setInt("renderMode", render_mode);
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, deferredColorTextureIDs.at(4));
+			glBindVertexArray(quadVAO);
+			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+			glBindVertexArray(0);
+			glEnable(GL_DEPTH_TEST);
+		}
+		else if (render_mode == RENDER_SSAO) {
+			renderSSAO();
+			glDisable(GL_DEPTH_TEST);
+			quadShader.useProgram();
+			quadShader.setInt("renderMode", render_mode);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, SSAOTextureID);
 			glBindVertexArray(quadVAO);
 			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 			glBindVertexArray(0);
@@ -1414,8 +1497,8 @@ glm::vec3 Renderer::lightDir;
 std::vector<glm::vec4> Renderer::lightPos;
 std::vector<glm::vec4> Renderer::lightColor;
 std::vector<glm::vec4> Renderer::lightParam;
-
-
+int Renderer::numSSAOSamples = 64;
+float Renderer::SSAOSampleRadius = 0.38f;
 
 //clockwise winding order
 const GLfloat cube_vertices[108]{

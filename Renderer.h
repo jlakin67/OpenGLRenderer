@@ -6,9 +6,6 @@
 #include <chrono>
 #include <random>
 
-//setup general model asset shader with different shading modes controlled by uniform 
-//and ui for transforming and adding model assets
-
 extern Camera camera;
 extern Camera cameraAlt;
 
@@ -68,6 +65,7 @@ public:
 	void popPointLight();
 	void updateNumShadowedPointLights(int num);
 	void updateStaticPointShadowMap() { renderPointShadowMaps(); }
+	void updateSSAOParameters(int numSamples, float radius);
 
 	void setupTestScene(); //old, debug scene used for previous versions of this code
 	void setup();
@@ -87,11 +85,13 @@ public:
 	static std::vector<glm::vec4> lightColor;
 	static std::vector<glm::vec4> lightParam;
 	static std::vector<Model*> modelAssets;
+	static int numSSAOSamples;
+	static float SSAOSampleRadius;
 
 	//displaying for debugging purposes
 	enum RenderModes {
 		RENDER_DEFAULT, RENDER_POSITION, RENDER_NORMAL, RENDER_ALBEDO, RENDER_DEPTH,
-		RENDER_SPECULARITY, RENDER_SHADOW, RENDER_CASCADE_DEPTHS, RENDER_WIREFRAME, NUM_RENDER_MODES
+		RENDER_SPECULARITY, RENDER_SHADOW, RENDER_CASCADE_DEPTHS, RENDER_WIREFRAME, RENDER_SSAO, NUM_RENDER_MODES
 	};
 	enum DisplaySkybox { SKYBOX_DEFAULT, SKYBOX_SHADOW_MAP, NUM_SKYBOXES };
 	enum RenderFrustumOutline { NO_FRUSTUM_OUTLINE, VIEW_FRUSTUM_OUTLINE, CASCADE_FRUSTUM_OUTLINE, NUM_FRUSTUM_OUTLINES };
@@ -161,6 +161,11 @@ private:
 	Shader quadShader;
 	void setupDeferredFramebuffer();
 
+	GLuint SSAOFramebufferID = 0, SSAOBlurFramebufferID = 0;
+	GLuint SSAOTextureID = 0, SSAOBlurTextureID = 0;
+	Shader SSAOShader;
+	void setupSSAO();
+
 	//gamma correction, tone mapping, anti-aliasing
 	GLuint postprocessFramebufferID = 0;
 	GLuint postprocessColorTextureID = 0;
@@ -215,6 +220,8 @@ private:
 	
 	void renderTestScenePointShadowMaps(); //old
 	void renderPointShadowMaps();
+
+	void renderSSAO();
 
 	void renderLightingPass();
 
