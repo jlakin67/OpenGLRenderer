@@ -277,5 +277,8 @@
     <None Include="Shaders\SSAO.frag">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="Shaders\Bilateral.frag">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

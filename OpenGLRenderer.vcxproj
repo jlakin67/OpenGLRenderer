@@ -191,6 +191,7 @@
   <ItemGroup>
     <None Include="Shaders\Axis.frag" />
     <None Include="Shaders\Axis.vert" />
+    <None Include="Shaders\Bilateral.frag" />
     <None Include="Shaders\CascadeFrustum.frag" />
     <None Include="Shaders\CascadeFrustum.vert" />
     <None Include="Shaders\Deferred.frag" />

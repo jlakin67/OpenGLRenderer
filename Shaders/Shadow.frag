@@ -42,8 +42,8 @@ mat4 biasMatrix = mat4(vec4(0.5, 0.0, 0.0, 0.0),
 					   vec4(0.0, 0.0, 0.5, 0.0),
 					   vec4(0.5, 0.5, 0.5, 1.0));
 
-float gaussian(float x, float v) {
-	return ONE_OVER_TWO_PI * (1.0f / v) * exp(-x/(2.0f*v));
+float gaussian(float distanceSquared, float sigma) {
+	return 0.3989423f*exp(-distanceSquared / (2.0f*sigma*sigma)) / sigma;
 }
 
 float isShadow(samplerCubeArrayShadow shadowMaps, vec4 texCoord, float depth) {
@@ -172,7 +172,7 @@ float cascadedShadowCalculationPCF(float viewDepth, vec4 worldPosition, int kern
 		shadow = 0.0f;
 		for (int i = -kernelOffset; i <= kernelOffset; i++) {
 			for (int j = -kernelOffset; j <= kernelOffset; j++) {
-				shadow += gaussian(length(vec2(i,j)), (kernelWidth/6.0f)*(kernelWidth/6.0f))*
+				shadow += gaussian(i*i + j*j, (kernelWidth/6.0f))*
 				cascadedShadowCalculation(viewDepth, worldPosition, constantShadowTexCoordDx, constantShadowTexCoordDy, bias, vec2(i, j));
 			}
 		}
@@ -202,7 +202,7 @@ float cascadedShadowCalculationPoissonDisk(float viewDepth, vec4 worldPosition, 
 		//poissonSample += (shadowTexelStep * vec2(cos(randomAngle), sin(randomAngle)));
 
 		poissonSample *= searchWidth;
-		shadow += gaussian(length(poissonSample), (searchWidth/6.0f)*(searchWidth/6.0f))*
+		shadow += gaussian(dot(poissonSample,poissonSample), (searchWidth/6.0f))*
 				cascadedShadowCalculation(viewDepth, worldPosition, constantShadowTexCoordDx, constantShadowTexCoordDy, bias, poissonSample);
 	}
 	return shadow;

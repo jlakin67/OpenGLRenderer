@@ -10,6 +10,7 @@ uniform sampler2D gNormal;
 uniform sampler2D gDepth;
 uniform sampler2D gAlbedo;
 uniform sampler2D gSpecularExponent;
+uniform sampler2D SSAO;
 uniform bool containsShadow = false;
 uniform samplerCubeArrayShadow shadowMaps;
 uniform float ambientStrength = 0.3;
@@ -92,6 +93,7 @@ void main() {
 	vec4 albedo = vec4(texture(gAlbedo, texCoord).rgb, 1.0f);
 	vec4 specularExponent = texture(gSpecularExponent, texCoord);
 	float shadow = 1.0;
+	//float ao = texture(SSAO, texCoord).r;
 	if (containsShadow) {
 		vec4 shadowTexCoord = vec4(position.xyz - lightPos[instanceID].xyz, instanceID);
 		float depth = length(shadowTexCoord.xyz) / shadowFar;

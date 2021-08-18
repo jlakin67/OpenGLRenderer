@@ -87,6 +87,7 @@ public:
 	static std::vector<Model*> modelAssets;
 	static int numSSAOSamples;
 	static float SSAOSampleRadius;
+	static bool showBlur;
 
 	//displaying for debugging purposes
 	enum RenderModes {
@@ -164,6 +165,7 @@ private:
 	GLuint SSAOFramebufferID = 0, SSAOBlurFramebufferID = 0;
 	GLuint SSAOTextureID = 0, SSAOBlurTextureID = 0;
 	Shader SSAOShader;
+	Shader SSAOBlurShader;
 	void setupSSAO();
 
 	//gamma correction, tone mapping, anti-aliasing

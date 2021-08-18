@@ -15,16 +15,9 @@ Model::~Model()
 
 bool Model::loadModel(std::string path, bool hasSingleMesh, bool flipUVs) {
     //directory = path.substr(0, path.find_last_of('/'));
-    size_t lastOf = path.find_last_of('/');
-    delimiter = "/";
-    if (lastOf == -1) {
-        lastOf = path.find_last_of('\\');
-        delimiter = "\\";
-    }
-    directory = path.substr(0, lastOf);
-    std::replace(directory.begin(), directory.end(), '\\', '/');
     std::string newPath(path);
     std::replace(newPath.begin(), newPath.end(), '\\', '/');
+    directory = newPath.substr(0, newPath.find_last_of('/'));
     Assimp::Importer importer;
     importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_POINT | aiPrimitiveType_LINE);
     unsigned int importFlags = aiProcess_CalcTangentSpace | aiProcess_Triangulate

@@ -12,6 +12,7 @@ uniform sampler2D gNormal;
 uniform sampler2D gDepth;
 uniform sampler2D gAlbedo;
 uniform sampler2D gSpecularExponent;
+uniform sampler2D SSAO;
 uniform int shadingMode = 0; //0 is blinn-phong
 uniform bool containsShadow = false;
 uniform float ambientStrength = 0.3;
@@ -36,8 +37,8 @@ layout (std140, binding = 1) uniform Lights {
 	vec4 lightDirColor; //to disable set lightDirColor to vec3(0,0,0)
 };
 
-float gaussian(float x, float v) {
-	return ONE_OVER_TWO_PI * (1.0f / v) * exp(-x/(2.0f*v));
+float gaussian(float distanceSquared, float sigma) {
+	return 0.3989423f*exp(-distanceSquared / (2.0f*sigma*sigma)) / sigma;
 }
 
 float cascadedShadowCalculation(float viewDepth, vec4 worldPosition, vec3 constantShadowTexCoordDx, 
@@ -92,7 +93,7 @@ float cascadedShadowCalculationPCF(float viewDepth, vec4 worldPosition, int kern
 		shadow = 0.0f;
 		for (int i = -kernelOffset; i <= kernelOffset; i++) {
 			for (int j = -kernelOffset; j <= kernelOffset; j++) {
-				shadow += gaussian(length(vec2(i,j)), (kernelWidth/6.0f)*(kernelWidth/6.0f))*
+				shadow += gaussian(i*i + j*j, (kernelWidth/6.0f))*
 				cascadedShadowCalculation(viewDepth, worldPosition, constantShadowTexCoordDx, constantShadowTexCoordDy, bias, vec2(i, j));
 			}
 		}
@@ -124,13 +125,14 @@ void main() {
 	vec4 sampledDepth = texture(gDepth, texCoord);
 	float viewDepth = sampledDepth.r;
 	float shadow = 1.0;
+	float ao = texture(SSAO, texCoord).r;
 	if (containsShadow) {
 		shadow = cascadedShadowCalculationPCF(viewDepth, position, 2);
 	}
 	if (shadingMode == 0) {
 		vec3 finalColor = vec3(0,0,0);
 		finalColor += shadow*dirLightShading(albedo, specularExponent, normal.xyz, position.xyz);
-		finalColor += ambientStrength*albedo.rgb;
+		finalColor += ao*ambientStrength*albedo.rgb;
 		FragColor = vec4(finalColor, 1.0f);
 	} 
 	else FragColor = vec4(0.2f, 0.2f, 0.2f, 1.0f);

@@ -166,6 +166,7 @@ void Renderer::setupLightVolumes() {
 	lightVolumeShader.setInt("shadowMaps", 3);
 	lightVolumeShader.setInt("noise", 4);
 	lightVolumeShader.setInt("gSpecularExponent", 5);
+	lightVolumeShader.setInt("SSAO", 6);
 	lightVolumeShader.setBool("containsShadow", true);
 	lightVolumeShader.setFloat("shadowFar", shadow_far);
 	lightVolumeShader.setFloat("ambientStrength", ambientStrength);
@@ -258,6 +259,7 @@ void Renderer::setupDirectionalLightShader() {
 	directionalAmbientShader.setInt("gDepth", 3);
 	directionalAmbientShader.setInt("shadowCascades", 4);
 	directionalAmbientShader.setInt("gSpecularExponent", 5);
+	directionalAmbientShader.setInt("SSAO", 6);
 	directionalAmbientShader.setInt("numShadowCascades", numShadowCascades);
 	glUniform1fv(glGetUniformLocation(directionalAmbientShader.program, "shadowSplitDepths"),
 		numShadowCascades + 1, shadowSplitDepths);
@@ -443,6 +445,9 @@ void Renderer::setupSSAO()
 	SSAOShader.setInt("noise", 3);
 	SSAOShader.setInt("numSamples", numSSAOSamples);
 	SSAOShader.setFloat("radius", SSAOSampleRadius);
+	SSAOBlurShader.loadFile("Shaders/Quad_framebuffer.vert", "Shaders/Bilateral.frag");
+	SSAOBlurShader.useProgram();
+	SSAOBlurShader.setInt("screen", 0);
 }
 
 
@@ -473,9 +478,9 @@ void Renderer::setupTestSceneLights() {
 	numPointLights = 2;
 	numShadowedLights = 2;
 	lightPos.push_back(glm::vec4(3.0, 3.0, 3.0, 1.0));
-	lightPos.push_back(glm::vec4(0.0, 3.0, -1.0, 1.0));
+	lightPos.push_back(glm::vec4(1.94, 1.65, -2.38, 1.0));
 	lightColor.push_back(glm::vec4(0.6, 0.6, 0.6, 1.0));
-	lightColor.push_back(glm::vec4(0.3, 0.3, 0.3, 1.0));
+	lightColor.push_back(glm::vec4(0.6, 0.6, 0.6, 1.0));
 	lightParam.push_back(glm::vec4(lightConstant, lightLinear, lightQuadratic, specularExponent));
 	lightParam.push_back(glm::vec4(lightConstant, lightLinear, lightQuadratic, specularExponent));
 	lightDir = glm::vec4(cos(lightDirTheta) * cos(lightDirPhi),
@@ -484,6 +489,7 @@ void Renderer::setupTestSceneLights() {
 		0.0f);
 	lightDirColor = glm::vec4(0.2f, 0.2f, 0.2f, 1.0f);
 	setupLightVolumes();
+	//theta = 1.5555
 }
 
 
@@ -832,9 +838,13 @@ void Renderer::renderSSAO() {
 	glBindVertexArray(quadVAO);
 	glDisable(GL_DEPTH_TEST);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, SSAOBlurFramebufferID);
+	SSAOBlurShader.useProgram();
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, SSAOTextureID);
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 	glEnable(GL_DEPTH_TEST);
 	glBindVertexArray(0);
-	glActiveTexture(GL_TEXTURE0);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
@@ -858,6 +868,8 @@ void Renderer::renderLightingPass() {
 	glBindTexture(GL_TEXTURE_2D_ARRAY, cascadedShadowTextureArrayID);
 	glActiveTexture(GL_TEXTURE5);
 	glBindTexture(GL_TEXTURE_2D, deferredColorTextureIDs.at(4)); //gSpecularExponent
+	glActiveTexture(GL_TEXTURE6);
+	glBindTexture(GL_TEXTURE_2D, SSAOBlurTextureID);
 	glBindVertexArray(quadVAO);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 	glBindVertexArray(0);
@@ -1466,7 +1478,8 @@ void Renderer::render() {
 			quadShader.useProgram();
 			quadShader.setInt("renderMode", render_mode);
 			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, SSAOTextureID);
+			if (showBlur) glBindTexture(GL_TEXTURE_2D, SSAOBlurTextureID);
+			else glBindTexture(GL_TEXTURE_2D, SSAOTextureID);
 			glBindVertexArray(quadVAO);
 			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 			glBindVertexArray(0);
@@ -1499,6 +1512,7 @@ std::vector<glm::vec4> Renderer::lightColor;
 std::vector<glm::vec4> Renderer::lightParam;
 int Renderer::numSSAOSamples = 64;
 float Renderer::SSAOSampleRadius = 0.38f;
+bool Renderer::showBlur = false;
 
 //clockwise winding order
 const GLfloat cube_vertices[108]{

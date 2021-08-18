@@ -48,15 +48,14 @@ public:
 
 class Model {
 public:
-    Model() : directory(""), delimiter(""), instanceBuf{ 0 },
-        position(0.0f, 0.0f, 0.0f, 1.0f), yaw(0.0f), pitch(0.0f), roll(0.0f), scale(1.0f) {}
+    Model() : directory(""), instanceBuf{ 0 }, position(0.0f, 0.0f, 0.0f, 1.0f), 
+        yaw(0.0f), pitch(0.0f), roll(0.0f), scale(1.0f) {}
     ~Model();
     bool loadModel(std::string path, bool hasSingleMesh = false, bool flipUVs = true);
     void draw(Shader& shader);
     void setUpInstances(std::vector<glm::mat4>& models);
     void drawInstances(Shader& shader, GLuint numInstances);
     std::string directory;
-    std::string delimiter;
     std::vector<Mesh> meshes;
     glm::vec4 position;
     float yaw, pitch, roll;

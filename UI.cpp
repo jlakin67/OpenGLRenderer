@@ -73,6 +73,7 @@ void UI::renderUI()
                 SSAOSampleRadiusChanged = ImGui::IsItemEdited();
                 if (numSSAOSamplesChanged || SSAOSampleRadiusChanged) 
                     renderer->updateSSAOParameters(numSSAOSamplesInput, SSAOSampleRadiusInput);
+                ImGui::Checkbox("Show blur", &Renderer::showBlur);
             }
             if (ImGui::CollapsingHeader("Lights")) {
                 static int lightNum = 0;

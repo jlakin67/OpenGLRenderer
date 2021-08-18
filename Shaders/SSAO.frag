@@ -1,6 +1,7 @@
 #version 430 core
 
 #define PI_OVER_TWO 1.570796f
+#define PHI 1.61803398874989484820459f
 
 out float FragColor;
 in vec2 texCoord;
@@ -27,8 +28,8 @@ uniform int numSamples = 25;
 
 void main() {
 	vec4 worldPosition = vec4(texture(gPosition, texCoord).xyz, 1.0f);
-	vec3 normal = normalize(texture(gNormal, texCoord).xyz);
-	vec2 randomAngles = texture(noise, worldPosition.xyz).xy;
+	vec3 normal = normalize(texture(gNormal, texCoord).xyz); 
+	vec2 randomAngles = texture(noise, 32.0f*sin(100.0f*worldPosition.xyz) + 32.0f).xy;
 	randomAngles.y -= PI_OVER_TWO; //sphere to hemisphere
 	vec3 randomDir = vec3(cos(randomAngles.x)*sin(randomAngles.y),
 						  sin(randomAngles.x)*sin(randomAngles.y),
