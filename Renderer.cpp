@@ -1346,8 +1346,12 @@ void Renderer::renderTestScene() { //old
 
 void Renderer::render() {
 	if (render_mode == RENDER_WIREFRAME) {
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		glm::mat4 identity(1.0f);
 		wireframeShader.useProgram();
+		wireframeShader.setMat4("model", glm::value_ptr(identity));
 		testAxis.draw();
 		wireframeShader.useProgram();
 		wireframeShader.setBool("instanced", true);
@@ -1360,7 +1364,8 @@ void Renderer::render() {
 		wireframeShader.setBool("instanced", false);
 		for (int i = 0; i < modelAssets.size(); i++) {
 			Model* curModel = modelAssets.at(i);
-			curModel->draw(wireframeShader);
+			if (drawBoundingBoxes) curModel->drawBoundingBoxes(wireframeShader, cubeVAO);
+			else curModel->draw(wireframeShader);
 		}
 		glDepthFunc(GL_LEQUAL);
 		sunShader.useProgram();
@@ -1528,6 +1533,7 @@ std::vector<glm::vec4> Renderer::lightParam;
 int Renderer::numSSAOSamples = 64;
 float Renderer::SSAOSampleRadius = 0.38f;
 bool Renderer::showBlur = false;
+bool Renderer::drawBoundingBoxes = false;
 
 //clockwise winding order
 const GLfloat cube_vertices[108]{

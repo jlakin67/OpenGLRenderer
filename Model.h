@@ -77,6 +77,7 @@ public:
     void beginOcclusionQueries(Shader& shader, GLuint boxVAO, glm::mat4& view);
     void drawOcclusionCulling(Shader& shader, GLuint boxVAO, glm::mat4& view, Shader& occlusionShader);
     void drawInstances(Shader& shader, GLuint numInstances);
+    void drawBoundingBoxes(Shader& shader, GLuint boxVAO);
     std::string directory;
     std::vector<Mesh> meshes;
     glm::vec4 position;

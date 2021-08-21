@@ -88,6 +88,7 @@ public:
 	static int numSSAOSamples;
 	static float SSAOSampleRadius;
 	static bool showBlur;
+	static bool drawBoundingBoxes;
 
 	//displaying for debugging purposes
 	enum RenderModes {
