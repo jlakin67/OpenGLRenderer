@@ -11,6 +11,7 @@ Model::~Model()
         }
     }
     glDeleteBuffers(1, &instanceBuf);
+    if (!occlusionQueryIDs.empty()) glDeleteQueries(occlusionQueryIDs.size(), occlusionQueryIDs.data());
 }
 
 bool Model::loadModel(std::string path, bool hasSingleMesh, bool flipUVs) {
@@ -20,7 +21,7 @@ bool Model::loadModel(std::string path, bool hasSingleMesh, bool flipUVs) {
     directory = newPath.substr(0, newPath.find_last_of('/'));
     Assimp::Importer importer;
     importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_POINT | aiPrimitiveType_LINE);
-    unsigned int importFlags = aiProcess_CalcTangentSpace | aiProcess_Triangulate
+    unsigned int importFlags = aiProcess_CalcTangentSpace | aiProcess_Triangulate | aiProcess_GenBoundingBoxes
         | aiProcess_GenSmoothNormals | aiProcess_PreTransformVertices | aiProcess_SortByPType;
     if (flipUVs) importFlags = importFlags | aiProcess_FlipUVs;
     const aiScene* scene = importer.ReadFile(newPath, importFlags);
@@ -74,7 +75,47 @@ bool Model::loadModel(std::string path, bool hasSingleMesh, bool flipUVs) {
         setUpBuffers(singleMesh);
         meshes.push_back(singleMesh);
     }
+    setupOcclusionQueries();
     return true;
+}
+
+void Model::drawOcclusionCulling(Shader& shader, GLuint boxVAO, glm::mat4& view, Shader& occlusionShader) {
+    shader.useProgram();
+    glm::mat4 model = glm::scale(glm::mat4(1.0f), scale);
+    glm::vec3 ypr(yaw, pitch, roll);
+    glm::mat4 rotation = glm::orientate4(ypr);
+    model = rotation * model;
+    model = glm::translate(model, glm::vec3(position));
+    shader.setMat4("model", glm::value_ptr(model));
+    shader.setBool("instanced", false);
+    ViewCompare compareFunc{ view * model };
+    std::sort(meshes.begin(), meshes.end(), compareFunc);
+    for (int i = 0; i < meshes.size(); i++) {
+        int queryReady = GL_FALSE;
+        int numSamplesPassed = 0;
+        GLuint occlusionQueryID = meshes.at(i).occlusionQueryID;
+        glGetQueryObjectiv(occlusionQueryID, GL_QUERY_RESULT_AVAILABLE, &queryReady);
+        glGetQueryObjectiv(occlusionQueryID, GL_QUERY_RESULT, &numSamplesPassed);
+        if (queryReady == GL_TRUE) {
+            if (numSamplesPassed > 0) meshes.at(i).draw(shader, false, 1);
+            else {
+                occlusionShader.useProgram();
+                glBindVertexArray(boxVAO);
+                glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+                glDepthMask(GL_FALSE);
+                glm::mat4 newModel = meshes.at(i).boundingBoxModel * model;
+                occlusionShader.setMat4("model", glm::value_ptr(newModel));
+                glBeginQuery(GL_ANY_SAMPLES_PASSED, occlusionQueryID);
+                glDrawArrays(GL_TRIANGLES, 0, 36);
+                glEndQuery(GL_ANY_SAMPLES_PASSED);
+                glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+                glDepthMask(GL_TRUE);
+                glBindVertexArray(0);
+            }
+        } else {
+            meshes.at(i).draw(shader, false, 1);
+        }
+    }
 }
 
 void Model::loadTexture(aiTextureType type, Mesh& mesh, const aiScene* scene, unsigned int mMaterialIndex) {
@@ -177,6 +218,9 @@ void Model::setUpMesh(aiMesh* ai_mesh, Mesh& mesh, const aiScene* scene, unsigne
             mesh.indices.push_back(face.mIndices[k]);
         }
     }
+    aiAABB box = ai_mesh->mAABB;
+    mesh.maxBox = glm::vec3(box.mMax.x, box.mMax.y, box.mMax.z);
+    mesh.minBox = glm::vec3(box.mMin.x, box.mMin.y, box.mMin.z);
 }
 
 void Model::setUpBuffers(Mesh& mesh)
@@ -317,6 +361,48 @@ void Model::setUpInstances(std::vector<glm::mat4>& models)
     glVertexAttribDivisor(12, 1);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
+}
+
+void Model::setupOcclusionQueries() {
+    occlusionQueryIDs.resize(meshes.size());
+    glGenQueries(occlusionQueryIDs.size(), occlusionQueryIDs.data());
+    minBox = meshes.at(0).minBox;
+    maxBox = meshes.at(0).maxBox;
+    int i = 0;
+    for (Mesh& mesh : meshes) {
+        glm::vec3 centroid = (mesh.minBox + mesh.maxBox) / 2.0f;
+        glm::vec3 scaleVec = (mesh.maxBox - mesh.minBox) / 2.0f;
+        glm::mat4 model = glm::scale(glm::mat4(1.0f), scaleVec);
+        model = glm::translate(model, centroid);
+        mesh.boundingBoxModel = model;
+        minBox = glm::min(minBox, mesh.minBox);
+        maxBox = glm::max(maxBox, mesh.maxBox);
+        mesh.occlusionQueryID = occlusionQueryIDs.at(i);
+        i++;
+    }
+}
+
+void Model::beginOcclusionQueries(Shader& shader, GLuint boxVAO, glm::mat4& view) {
+    shader.useProgram();
+    glBindVertexArray(boxVAO);
+    glm::mat4 model = glm::scale(glm::mat4(1.0f), scale);
+    glm::vec3 ypr(yaw, pitch, roll);
+    glm::mat4 rotation = glm::orientate4(ypr);
+    model = rotation * model;
+    model = glm::translate(model, glm::vec3(position));
+    ViewCompare compareFunc{ view * model };
+    std::sort(meshes.begin(), meshes.end(), compareFunc);
+    glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+    glDepthMask(GL_FALSE);
+    for (int i = 0; i < meshes.size(); i++) {
+        glm::mat4 newModel = meshes.at(i).boundingBoxModel * model;
+        shader.setMat4("model", glm::value_ptr(newModel));
+        glBeginQuery(GL_ANY_SAMPLES_PASSED, meshes.at(i).occlusionQueryID);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+        glEndQuery(GL_ANY_SAMPLES_PASSED);
+    }
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    glDepthMask(GL_TRUE);
 }
 
 void Model::drawInstances(Shader& shader, GLuint numInstances)

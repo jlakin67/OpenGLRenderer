@@ -209,6 +209,35 @@ private:
 
 	void setupTestSceneModel();
 
+	struct ViewCompareModel {
+		ViewCompareModel(glm::mat4 view) { this->view = view; }
+		bool operator() (Model* m1, Model* m2) {
+			glm::mat4 model1 = glm::scale(glm::mat4(1.0f), m1->scale);
+			glm::vec3 ypr1(m1->yaw, m1->pitch, m1->roll);
+			glm::mat4 rotation1 = glm::orientate4(ypr1);
+			model1 = rotation1 * model1;
+			model1 = glm::translate(model1, glm::vec3(m1->position));
+			glm::mat4 model2 = glm::scale(glm::mat4(1.0f), m2->scale);
+			glm::vec3 ypr2(m2->yaw, m2->pitch, m2->roll);
+			glm::mat4 rotation2 = glm::orientate4(ypr2);
+			model2 = rotation2 * model2;
+			model2 = glm::translate(model2, glm::vec3(m2->position));
+			glm::vec4 minBoxView1 = view * model1 * glm::vec4(m1->minBox, 1.0f);
+			glm::vec4 maxBoxView1 = view * model1 * glm::vec4(m1->maxBox, 1.0f);
+			glm::vec4 minBoxView2 = view * model2 * glm::vec4(m2->minBox, 1.0f);
+			glm::vec4 maxBoxView2 = view * model2 * glm::vec4(m2->maxBox, 1.0f);
+			if (-minBoxView1.z < -maxBoxView2.z && -minBoxView1.z < -minBoxView2.z) return true;
+			if (-maxBoxView1.z < -maxBoxView2.z && -maxBoxView1.z < -minBoxView2.z) return true;
+			if (-minBoxView2.z < -maxBoxView1.z && -minBoxView2.z < -minBoxView1.z) return false;
+			if (-maxBoxView2.z < -maxBoxView1.z && -maxBoxView2.z < -minBoxView1.z) return false;
+			return false;
+		}
+		glm::mat4 view;
+	};
+
+	Shader occlusionShader;
+	void setupOcclusionQueries();
+
 	void renderTestSceneDeferredPass(); //old
 	void renderDeferredPass();
 

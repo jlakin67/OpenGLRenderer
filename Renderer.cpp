@@ -407,6 +407,16 @@ void Renderer::setupDeferredFramebuffer() {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
+void Renderer::setupOcclusionQueries()
+{
+	occlusionShader.loadFile("Shaders/Basic.vert", "Shaders/Null.frag");
+	ViewCompareModel compareFunc{ view };
+	std::sort(modelAssets.begin(), modelAssets.end(), compareFunc);
+	for (int i = 0; i < modelAssets.size(); i++) {
+		modelAssets.at(i)->beginOcclusionQueries(occlusionShader, cubeVAO, view);
+	}
+}
+
 void Renderer::setupSSAO()
 {
 	glGenFramebuffers(1, &SSAOFramebufferID);
@@ -635,9 +645,11 @@ void Renderer::renderDeferredPass()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glClearBufferfv(GL_COLOR, 0, &far);
 	glActiveTexture(GL_TEXTURE0);
+	ViewCompareModel compareFunc{ view };
+	std::sort(modelAssets.begin(), modelAssets.end(), compareFunc);
 	for (int i = 0; i < modelAssets.size(); i++) {
 		Model* curModel = modelAssets.at(i);
-		curModel->draw(modelShader);
+		curModel->drawOcclusionCulling(modelShader, cubeVAO, view, occlusionShader);
 	}
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
@@ -1047,6 +1059,7 @@ void Renderer::addModel(std::string path, bool importAsSingleMesh, bool flipUVs)
 		modelAssets.push_back(model);
 	else delete model;
 	renderPointShadowMaps();
+	setupOcclusionQueries();
 }
 
 void Renderer::removeModel(int index)
@@ -1055,6 +1068,7 @@ void Renderer::removeModel(int index)
 	delete modelAssets.at(index);
 	modelAssets.erase(modelAssets.begin() + index);
 	renderPointShadowMaps();
+	setupOcclusionQueries();
 }
 
 void Renderer::pushPointLight()
@@ -1187,6 +1201,7 @@ void Renderer::setup()
 	setupSunDisplay();
 	setupWireframeShader();
 	renderPointShadowMaps();
+	setupOcclusionQueries();
 }
 
 void Renderer::renderTestScene() { //old

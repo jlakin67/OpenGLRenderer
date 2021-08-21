@@ -280,5 +280,11 @@
     <None Include="Shaders\Bilateral.frag">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="Shaders\Basic.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\Null.frag">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

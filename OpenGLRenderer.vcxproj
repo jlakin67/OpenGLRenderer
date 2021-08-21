@@ -191,6 +191,7 @@
   <ItemGroup>
     <None Include="Shaders\Axis.frag" />
     <None Include="Shaders\Axis.vert" />
+    <None Include="Shaders\Basic.vert" />
     <None Include="Shaders\Bilateral.frag" />
     <None Include="Shaders\CascadeFrustum.frag" />
     <None Include="Shaders\CascadeFrustum.vert" />
@@ -211,6 +212,7 @@
     <None Include="Shaders\Model_blinn_phong.frag" />
     <None Include="Shaders\Model_blinn_phong_deferred.frag" />
     <None Include="Shaders\Model_blinn_phong_forward.frag" />
+    <None Include="Shaders\Null.frag" />
     <None Include="Shaders\Postprocess.frag" />
     <None Include="Shaders\Quad.frag" />
     <None Include="Shaders\Quad.vert" />
