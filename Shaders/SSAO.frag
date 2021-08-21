@@ -1,6 +1,7 @@
 #version 430 core
 
 #define PI_OVER_TWO 1.570796f
+#define ONE_OVER_PI 0.318310f
 #define PHI 1.61803398874989484820459f
 
 out float FragColor;
@@ -40,6 +41,7 @@ void main() {
 	float ao = 0.0f;
 	for (int i = 0; i < numSamples; i++) {
 		vec3 offset = TBN*poissonDiskHemisphere[i];
+		//float scaleBias = mix(0.1f, 1.0f, (radius/2.5f)*(radius/2.5f));
 		float sampleScale = mix(0.1f, 1.0f, (float(i)/float(numSamples))*(float(i)/float(numSamples)));
 		vec3 sampleWorldPos = worldPosition.xyz + sampleScale*radius*offset;
 		vec4 sampleViewPos = view*vec4(sampleWorldPos, 1.0f);
@@ -52,4 +54,5 @@ void main() {
 		ao += edgeScale*(-sampleViewPos.z - bias >= projectedDepth ? 1.0f : 0.0f);
 	}
 	FragColor = 1.0f - (ao/float(numSamples));
+	//FragColor = pow(FragColor, 2.2);
 }

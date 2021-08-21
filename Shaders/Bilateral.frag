@@ -4,7 +4,7 @@ in vec2 texCoord;
 out float FragColor;
 
 uniform sampler2D screen;
-uniform int kernelOffset = 4;
+uniform int kernelOffset = 6;
 uniform float sigma_r = 0.1;
 uniform vec2 screenDim = vec2(1600.0f, 900.0f);
 

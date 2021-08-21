@@ -67,9 +67,9 @@ void UI::renderUI()
                 int numSSAOSamplesInput = Renderer::numSSAOSamples;
                 float SSAOSampleRadiusInput = Renderer::SSAOSampleRadius;
                 bool numSSAOSamplesChanged = false, SSAOSampleRadiusChanged = false;
-                ImGui::DragInt("SSAO Samples:", &numSSAOSamplesInput, 1, 16, maxSamples);
+                ImGui::DragInt("SSAO Samples:", &numSSAOSamplesInput, 1, 1, maxSamples);
                 numSSAOSamplesChanged = ImGui::IsItemEdited();
-                ImGui::DragFloat("SSAO radius:", &SSAOSampleRadiusInput, 0.01f, 0.05f, 2.5f);
+                ImGui::DragFloat("SSAO radius:", &SSAOSampleRadiusInput, 0.01f, 0.00f, 2.5f);
                 SSAOSampleRadiusChanged = ImGui::IsItemEdited();
                 if (numSSAOSamplesChanged || SSAOSampleRadiusChanged) 
                     renderer->updateSSAOParameters(numSSAOSamplesInput, SSAOSampleRadiusInput);
@@ -79,6 +79,7 @@ void UI::renderUI()
                 if (Renderer::render_mode == Renderer::RENDER_WIREFRAME) {
                     ImGui::Checkbox("Draw bounding boxes", &Renderer::drawBoundingBoxes);
                 }
+                ImGui::Checkbox("Use occlusion culling", &Renderer::useOcclusionCulling);
             }
             if (ImGui::CollapsingHeader("Lights")) {
                 static int lightNum = 0;
@@ -292,6 +293,7 @@ void UI::renderUI()
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     }
     else {
+        windowHovered = false;
         ImGui::EndFrame();
     }
 }

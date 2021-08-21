@@ -46,3 +46,4 @@ constexpr int maxSamples = 81;
 extern GLfloat poissonDisk[4 * maxSamples];
 extern GLfloat poissonDiskDir[4 * maxSamples];
 extern GLfloat poissonDiskDirHemi[4 * maxSamples];
+extern GLfloat poissonDiskDirHemi2[4 * maxSamples];

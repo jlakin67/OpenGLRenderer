@@ -32,7 +32,7 @@ struct Texture {
 class Mesh {
 public:
     Mesh() : vao(0), vbo(0), ebo(0), numIndices(0), hasTexCoords(true), hasTexture(true), color_diffuse(0.6f, 0.6f, 0.6f, 1.0f),
-        color_specular(0.0f, 0.0f, 0.0f), specularHighlight(0.0f), minBox(0.0f), maxBox(0.0f), occlusionQueryID(0), boundingBoxModel(0.0f) {}
+        color_specular(0.0f, 0.0f, 0.0f), specularHighlight(0.0f), minBox(0.0f), maxBox(0.0f), occlusionQueryID(0) {}
     GLuint vao, vbo, ebo;
     std::vector<Vertex> vertices;
     std::vector<GLuint> indices;
@@ -45,7 +45,6 @@ public:
     float specularHighlight;
     glm::vec3 minBox, maxBox;
     GLuint occlusionQueryID;
-    glm::mat4 boundingBoxModel;
     void draw(Shader& shader, bool instanced = false, GLuint numInstances = 1);
 };
 

@@ -41,7 +41,7 @@ void Renderer::setupUniformBuffers() {
 	glBufferData(GL_UNIFORM_BUFFER, sizeof(SamplesBlock), NULL, GL_STATIC_DRAW);
 	glBufferSubData(GL_UNIFORM_BUFFER, offsetof(SamplesBlock, poissonDisk), sizeof(poissonDisk), poissonDisk);
 	glBufferSubData(GL_UNIFORM_BUFFER, offsetof(SamplesBlock, poissonDiskSphere), sizeof(poissonDiskDir), poissonDiskDir);
-	glBufferSubData(GL_UNIFORM_BUFFER, offsetof(SamplesBlock, poissonDiskHemisphere), sizeof(poissonDiskDirHemi), poissonDiskDirHemi);
+	glBufferSubData(GL_UNIFORM_BUFFER, offsetof(SamplesBlock, poissonDiskHemisphere), sizeof(poissonDiskDirHemi2), poissonDiskDirHemi2);
 	glBindBufferBase(GL_UNIFORM_BUFFER, 3, uboIDs[UBO_SAMPLES]);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
@@ -409,12 +409,20 @@ void Renderer::setupDeferredFramebuffer() {
 
 void Renderer::setupOcclusionQueries()
 {
+	glBindFramebuffer(GL_FRAMEBUFFER, deferredFramebufferID);
 	occlusionShader.loadFile("Shaders/Basic.vert", "Shaders/Null.frag");
 	ViewCompareModel compareFunc{ view };
 	std::sort(modelAssets.begin(), modelAssets.end(), compareFunc);
+	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+	for (int i = 0; i < modelAssets.size(); i++) {
+		modelAssets.at(i)->draw(occlusionShader);
+	}
+	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 	for (int i = 0; i < modelAssets.size(); i++) {
 		modelAssets.at(i)->beginOcclusionQueries(occlusionShader, cubeVAO, view);
 	}
+	glClear(GL_DEPTH_BUFFER_BIT);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void Renderer::setupSSAO()
@@ -645,11 +653,14 @@ void Renderer::renderDeferredPass()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glClearBufferfv(GL_COLOR, 0, &far);
 	glActiveTexture(GL_TEXTURE0);
-	ViewCompareModel compareFunc{ view };
-	std::sort(modelAssets.begin(), modelAssets.end(), compareFunc);
+	if (useOcclusionCulling) {
+		ViewCompareModel compareFunc{ view };
+		std::sort(modelAssets.begin(), modelAssets.end(), compareFunc);
+	}
 	for (int i = 0; i < modelAssets.size(); i++) {
 		Model* curModel = modelAssets.at(i);
-		curModel->drawOcclusionCulling(modelShader, cubeVAO, view, occlusionShader);
+		if (useOcclusionCulling) curModel->drawOcclusionCulling(modelShader, cubeVAO, view, occlusionShader);
+		else curModel->draw(modelShader);
 	}
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
@@ -1464,7 +1475,7 @@ void Renderer::render() {
 			quadShader.useProgram();
 			quadShader.setInt("renderMode", render_mode);
 			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, SSAOTextureID);
+			glBindTexture(GL_TEXTURE_2D, deferredColorTextureIDs.at(3));
 			glBindVertexArray(quadVAO);
 			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 			glBindVertexArray(0);
@@ -1530,10 +1541,11 @@ glm::vec3 Renderer::lightDir;
 std::vector<glm::vec4> Renderer::lightPos;
 std::vector<glm::vec4> Renderer::lightColor;
 std::vector<glm::vec4> Renderer::lightParam;
-int Renderer::numSSAOSamples = 64;
+int Renderer::numSSAOSamples = 23;
 float Renderer::SSAOSampleRadius = 0.38f;
 bool Renderer::showBlur = false;
 bool Renderer::drawBoundingBoxes = false;
+bool Renderer::useOcclusionCulling = true;
 
 //clockwise winding order
 const GLfloat cube_vertices[108]{

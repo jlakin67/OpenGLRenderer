@@ -75,12 +75,6 @@ bool Model::loadModel(std::string path, bool hasSingleMesh, bool flipUVs) {
         setUpBuffers(singleMesh);
         meshes.push_back(singleMesh);
     }
-    minBox = meshes.at(0).minBox;
-    maxBox = meshes.at(0).maxBox;
-    for (Mesh& mesh : meshes) {
-        minBox = glm::min(minBox, mesh.minBox);
-        maxBox = glm::max(maxBox, mesh.maxBox);
-    }
     setupOcclusionQueries();
     return true;
 }
@@ -91,7 +85,8 @@ void Model::drawOcclusionCulling(Shader& shader, GLuint boxVAO, glm::mat4& view,
     glm::vec3 ypr(yaw, pitch, roll);
     glm::mat4 rotation = glm::orientate4(ypr);
     model = rotation * model;
-    model = glm::translate(model, glm::vec3(position));
+    glm::mat4 translateMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(position));
+    model = translateMatrix * model;
     shader.setMat4("model", glm::value_ptr(model));
     shader.setBool("instanced", false);
     ViewCompare compareFunc{ view * model };
@@ -102,18 +97,23 @@ void Model::drawOcclusionCulling(Shader& shader, GLuint boxVAO, glm::mat4& view,
         GLuint occlusionQueryID = meshes.at(i).occlusionQueryID;
         glGetQueryObjectiv(occlusionQueryID, GL_QUERY_RESULT_AVAILABLE, &queryReady);
         glGetQueryObjectiv(occlusionQueryID, GL_QUERY_RESULT, &numSamplesPassed);
+        glBeginQuery(GL_ANY_SAMPLES_PASSED, occlusionQueryID);
         if (queryReady == GL_TRUE) {
             if (numSamplesPassed > 0) meshes.at(i).draw(shader, false, 1);
             else {
+                Mesh mesh = meshes.at(i);
+                glm::vec3 boundingBoxScale = (mesh.maxBox - mesh.minBox) / 2.0f;
+                glm::vec3 boundingBoxPos = (mesh.maxBox + mesh.minBox) / 2.0f;
+                glm::mat4 newModel = glm::scale(glm::mat4(1.0f), boundingBoxScale * scale);
+                newModel = rotation * newModel;
+                glm::mat4 translateMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(position) + scale * boundingBoxPos);
+                newModel = translateMatrix * newModel;
                 occlusionShader.useProgram();
                 glBindVertexArray(boxVAO);
                 glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
                 glDepthMask(GL_FALSE);
-                glm::mat4 newModel = meshes.at(i).boundingBoxModel * model;
                 occlusionShader.setMat4("model", glm::value_ptr(newModel));
-                glBeginQuery(GL_ANY_SAMPLES_PASSED, occlusionQueryID);
                 glDrawArrays(GL_TRIANGLES, 0, 36);
-                glEndQuery(GL_ANY_SAMPLES_PASSED);
                 glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
                 glDepthMask(GL_TRUE);
                 glBindVertexArray(0);
@@ -121,6 +121,7 @@ void Model::drawOcclusionCulling(Shader& shader, GLuint boxVAO, glm::mat4& view,
         } else {
             meshes.at(i).draw(shader, false, 1);
         }
+        glEndQuery(GL_ANY_SAMPLES_PASSED);
     }
 }
 
@@ -152,7 +153,10 @@ void Model::loadTexture(aiTextureType type, Mesh& mesh, const aiScene* scene, un
                 glGenTextures(1, &id);
                 texture.id = id;
                 glBindTexture(GL_TEXTURE_2D, id);
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB8_ALPHA8, textureWidth, textureHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
+                if (type == aiTextureType_DIFFUSE || type == aiTextureType_AMBIENT) 
+                    glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB8_ALPHA8, textureWidth, textureHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
+                else 
+                    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, textureWidth, textureHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
                 stbi_image_free(image);
                 glGenerateMipmap(GL_TEXTURE_2D);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -377,11 +381,6 @@ void Model::setupOcclusionQueries() {
     maxBox = meshes.at(0).maxBox;
     int i = 0;
     for (Mesh& mesh : meshes) {
-        glm::vec3 centroid = (mesh.minBox + mesh.maxBox) / 2.0f;
-        glm::vec3 scaleVec = (mesh.maxBox - mesh.minBox) / 2.0f;
-        glm::mat4 model = glm::scale(glm::mat4(1.0f), scaleVec);
-        model = glm::translate(model, centroid);
-        mesh.boundingBoxModel = model;
         minBox = glm::min(minBox, mesh.minBox);
         maxBox = glm::max(maxBox, mesh.maxBox);
         mesh.occlusionQueryID = occlusionQueryIDs.at(i);
@@ -396,13 +395,20 @@ void Model::beginOcclusionQueries(Shader& shader, GLuint boxVAO, glm::mat4& view
     glm::vec3 ypr(yaw, pitch, roll);
     glm::mat4 rotation = glm::orientate4(ypr);
     model = rotation * model;
-    model = glm::translate(model, glm::vec3(position));
+    glm::mat4 translateMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(position));
+    model = translateMatrix * model;
     ViewCompare compareFunc{ view * model };
     std::sort(meshes.begin(), meshes.end(), compareFunc);
     glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
     glDepthMask(GL_FALSE);
     for (int i = 0; i < meshes.size(); i++) {
-        glm::mat4 newModel = meshes.at(i).boundingBoxModel * model;
+        Mesh mesh = meshes.at(i);
+        glm::vec3 boundingBoxScale = (mesh.maxBox - mesh.minBox) / 2.0f;
+        glm::vec3 boundingBoxPos = (mesh.maxBox + mesh.minBox) / 2.0f;
+        glm::mat4 newModel = glm::scale(glm::mat4(1.0f), boundingBoxScale * scale);
+        newModel = rotation * newModel;
+        glm::mat4 translateMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(position) + scale * boundingBoxPos);
+        newModel = translateMatrix * newModel;
         shader.setMat4("model", glm::value_ptr(newModel));
         glBeginQuery(GL_ANY_SAMPLES_PASSED, meshes.at(i).occlusionQueryID);
         glDrawArrays(GL_TRIANGLES, 0, 36);
