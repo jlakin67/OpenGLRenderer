@@ -73,7 +73,12 @@ void UI::renderUI()
                 SSAOSampleRadiusChanged = ImGui::IsItemEdited();
                 if (numSSAOSamplesChanged || SSAOSampleRadiusChanged) 
                     renderer->updateSSAOParameters(numSSAOSamplesInput, SSAOSampleRadiusInput);
-                ImGui::Checkbox("Show blur", &Renderer::showBlur);
+                if (Renderer::render_mode == Renderer::RENDER_SSAO) {
+                    ImGui::Checkbox("Show blur", &Renderer::showBlur);
+                }
+                if (Renderer::render_mode == Renderer::RENDER_WIREFRAME) {
+                    ImGui::Checkbox("Draw bounding boxes", &Renderer::drawBoundingBoxes);
+                }
             }
             if (ImGui::CollapsingHeader("Lights")) {
                 static int lightNum = 0;

@@ -20,7 +20,7 @@ bool Model::loadModel(std::string path, bool hasSingleMesh, bool flipUVs) {
     directory = newPath.substr(0, newPath.find_last_of('/'));
     Assimp::Importer importer;
     importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_POINT | aiPrimitiveType_LINE);
-    unsigned int importFlags = aiProcess_CalcTangentSpace | aiProcess_Triangulate
+    unsigned int importFlags = aiProcess_CalcTangentSpace | aiProcess_Triangulate | aiProcess_GenBoundingBoxes
         | aiProcess_GenSmoothNormals | aiProcess_PreTransformVertices | aiProcess_SortByPType;
     if (flipUVs) importFlags = importFlags | aiProcess_FlipUVs;
     const aiScene* scene = importer.ReadFile(newPath, importFlags);
@@ -73,6 +73,12 @@ bool Model::loadModel(std::string path, bool hasSingleMesh, bool flipUVs) {
     if (hasSingleMesh) {
         setUpBuffers(singleMesh);
         meshes.push_back(singleMesh);
+    }
+    minBox = meshes.at(0).minBox;
+    maxBox = meshes.at(0).maxBox;
+    for (Mesh& mesh : meshes) {
+        minBox = glm::min(minBox, mesh.minBox);
+        maxBox = glm::max(maxBox, mesh.maxBox);
     }
     return true;
 }
@@ -177,6 +183,9 @@ void Model::setUpMesh(aiMesh* ai_mesh, Mesh& mesh, const aiScene* scene, unsigne
             mesh.indices.push_back(face.mIndices[k]);
         }
     }
+    aiAABB box = ai_mesh->mAABB;
+    mesh.minBox = glm::vec3(box.mMin.x, box.mMin.y, box.mMin.z);
+    mesh.maxBox = glm::vec3(box.mMax.x, box.mMax.y, box.mMax.z);
 }
 
 void Model::setUpBuffers(Mesh& mesh)
@@ -287,7 +296,8 @@ void Model::draw(Shader& shader) {
     glm::vec3 ypr(yaw, pitch, roll);
     glm::mat4 rotation = glm::orientate4(ypr);
     model = rotation * model;
-    model = glm::translate(model, glm::vec3(position));
+    glm::mat4 translateMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(position));
+    model = translateMatrix * model;
     shader.setMat4("model", glm::value_ptr(model));
     shader.setBool("instanced", false);
     for (Mesh& mesh : meshes) {
@@ -334,8 +344,29 @@ void Model::drawInstances(Shader& shader, GLuint numInstances)
     glm::vec3 ypr(yaw, pitch, roll);
     glm::mat4 rotation = glm::orientate4(ypr);
     model = rotation * model;
-    model = glm::translate(model, glm::vec3(position));
+    glm::mat4 translateMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(position));
+    model = translateMatrix * model;
     shader.setMat4("model", glm::value_ptr(model));
     shader.setBool("instanced", true);
     meshes.at(0).draw(shader, true, numInstances);
+}
+
+void Model::drawBoundingBoxes(Shader& shader, GLuint boxVAO)
+{
+    shader.useProgram();
+    shader.setBool("instanced", false);
+    glBindVertexArray(boxVAO);
+    for (Mesh& mesh : meshes) {
+        glm::vec3 boundingBoxScale = (mesh.maxBox - mesh.minBox) / 2.0f;
+        glm::vec3 boundingBoxPos = (mesh.maxBox + mesh.minBox) / 2.0f;
+        glm::mat4 model = glm::scale(glm::mat4(1.0f), boundingBoxScale * scale);
+        glm::vec3 ypr(yaw, pitch, roll);
+        glm::mat4 rotation = glm::orientate4(ypr);
+        model = rotation * model;
+        glm::mat4 translateMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(position) + scale*boundingBoxPos);
+        model = translateMatrix * model;
+        shader.setMat4("model", glm::value_ptr(model));
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+    }
+    glBindVertexArray(0);
 }

@@ -32,7 +32,7 @@ struct Texture {
 class Mesh {
 public:
     Mesh() : vao(0), vbo(0), ebo(0), numIndices(0), hasTexCoords(true), hasTexture(true), color_diffuse(0.6f, 0.6f, 0.6f, 1.0f),
-        color_specular(0.0f, 0.0f, 0.0f), specularHighlight(0.0f) {}
+        color_specular(0.0f, 0.0f, 0.0f), specularHighlight(0.0f), minBox(0.0f), maxBox(0.0f) {}
     GLuint vao, vbo, ebo;
     std::vector<Vertex> vertices;
     std::vector<GLuint> indices;
@@ -43,24 +43,27 @@ public:
     glm::vec4 color_diffuse;
     glm::vec3 color_specular;
     float specularHighlight;
+    glm::vec3 minBox, maxBox;
     void draw(Shader& shader, bool instanced = false, GLuint numInstances = 1);
 };
 
 class Model {
 public:
     Model() : directory(""), instanceBuf{ 0 }, position(0.0f, 0.0f, 0.0f, 1.0f), 
-        yaw(0.0f), pitch(0.0f), roll(0.0f), scale(1.0f) {}
+        yaw(0.0f), pitch(0.0f), roll(0.0f), scale(1.0f), minBox(0.0f), maxBox(0.0f) {}
     ~Model();
     bool loadModel(std::string path, bool hasSingleMesh = false, bool flipUVs = true);
     void draw(Shader& shader);
     void setUpInstances(std::vector<glm::mat4>& models);
     void drawInstances(Shader& shader, GLuint numInstances);
+    void drawBoundingBoxes(Shader& shader, GLuint boxVAO);
     std::string directory;
     std::vector<Mesh> meshes;
     glm::vec4 position;
     float yaw, pitch, roll;
     glm::vec3 scale;
     GLuint instanceBuf;
+    glm::vec3 minBox, maxBox;
 private:
     void loadTexture(aiTextureType type, Mesh& mesh, const aiScene* scene, unsigned int mMaterialIndex);
     void setUpMesh(aiMesh* ai_mesh, Mesh& mesh, const aiScene* scene, unsigned int mMaterialIndex);
