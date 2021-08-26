@@ -45,7 +45,7 @@ void UI::renderUI()
             Renderer* renderer = Renderer::getInstance();
             if (ImGui::CollapsingHeader("Render/Camera")) {
                 const char* items[] = { "Default", "World position buffer", "Normal buffer", "Albedo", "Depth buffer",
-                    "Specularity", "Shadows", "Cascade split depths", "Wireframe", "SSAO"};
+                    "Specularity/Metalness", "Shadows", "Cascade split depths", "Wireframe", "SSAO", "Roughness"};
                 ImGui::Combo("Display buffer", &Renderer::render_mode, items, IM_ARRAYSIZE(items));
                 ImGui::Separator();
                 ImGui::Text("Skybox to render:");
@@ -228,13 +228,16 @@ void UI::renderUI()
                 static bool importAsSingleMesh = false;
                 static bool flipUVs = false;
                 static std::string fileName;
+                static bool hasPBR = false;
                 ImGui::InputText("Path to load model", &fileName);
                 ImGui::Checkbox("Import as single mesh", &importAsSingleMesh);
                 ImGui::SameLine();
                 ImGui::Checkbox("Flip UVs", &flipUVs);
                 ImGui::SameLine();
+                ImGui::Checkbox("PBR", &hasPBR);
+                ImGui::SameLine();
                 if (ImGui::Button("Load")) {
-                    renderer->addModel(fileName, importAsSingleMesh, flipUVs);
+                    renderer->addModel(fileName, importAsSingleMesh, flipUVs, hasPBR);
                 }
             }
             //Adjust point light params and position

@@ -9,7 +9,7 @@ uniform float far = 100.0;
 uniform int numShadowCascades = 3;
 uniform float shadowSplitDepths[6];
 //0 is default, 1 is position, 2 is normal, 3 is albedoSpec, 4 is depth buffer, 5 is specularity, 6 is shadow
-//7 is shadow cascades, 9 is SSAO
+//7 is shadow cascades, 9 is SSAO, 10 is roughness
 
 void main() {
 	vec4 color = texture(tex, texCoord);
@@ -41,6 +41,8 @@ void main() {
 		FragColor = FinalColor;
 	} else if (renderMode == 9) {
 		FragColor = vec4(vec3(color.r),1.0);
+	} else if (renderMode == 10) {
+		FragColor = vec4(vec3(color.a), 1.0f);
 	}
 	else {
 		FragColor = color;

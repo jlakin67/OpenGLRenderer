@@ -4,7 +4,7 @@ layout (location = 0) out float gDepth;
 layout (location = 1) out vec4 gPosition;
 layout (location = 2) out vec4 gNormal;
 layout (location = 3) out vec4 gAlbedo;
-layout (location = 4) out vec4 gSpecularExponent;
+layout (location = 4) out vec4 gSpecularRoughness;
 
 in vec3 viewPosition;
 in vec3 pos;
@@ -18,13 +18,15 @@ uniform bool containsSpecular = false;
 uniform bool containsAmbient = false;
 uniform bool containsNormal = false;
 uniform bool containsAlpha = false;
+uniform bool containsRoughness = false;
 uniform sampler2D texture_diffuse0;
 uniform sampler2D texture_ambient0;
 uniform sampler2D texture_specular0;
 uniform sampler2D texture_normal0;
 uniform sampler2D texture_alpha;
+uniform sampler2D texture_roughness;
 uniform vec4 color = vec4(0.6f,0.6f,0.6f,1.0f);
-uniform float specularHighlight = 1.0f;
+uniform float specularHighlight = 50.0f;
 uniform vec3 specularColor = vec3(1.0f, 1.0f, 1.0f);
 
 const mat3 TBN = mat3(tangent, bitangent, normal);
@@ -45,7 +47,13 @@ void main() {
 	} else {
 		specularColorOut = specularColor;
 	}
-	gSpecularExponent = vec4(specularColorOut, specularHighlight);
+	float roughnessOut;
+	if (containsRoughness) {
+		roughnessOut = texture(texture_roughness, texCoords).r;
+	} else {
+		roughnessOut = specularHighlight;
+	}
+	gSpecularRoughness = vec4(specularColorOut, roughnessOut);
 	//bool condition1 = all(notEqual(tangent, vec3(0,0,0)));
 	//bool condition2 = all(notEqual(bitangent, vec3(0,0,0)));
 	//w=1 means it wil be used in lighting calculation, w=0 means it won't

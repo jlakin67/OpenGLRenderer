@@ -14,8 +14,9 @@ Model::~Model()
     if (!occlusionQueryIDs.empty()) glDeleteQueries(occlusionQueryIDs.size(), occlusionQueryIDs.data());
 }
 
-bool Model::loadModel(std::string path, bool hasSingleMesh, bool flipUVs) {
+bool Model::loadModel(std::string path, bool hasSingleMesh, bool flipUVs, bool hasPBR) {
     //directory = path.substr(0, path.find_last_of('/'));
+    this->hasPBR = hasPBR;
     std::string newPath(path);
     std::replace(newPath.begin(), newPath.end(), '\\', '/');
     directory = newPath.substr(0, newPath.find_last_of('/'));
@@ -48,6 +49,7 @@ bool Model::loadModel(std::string path, bool hasSingleMesh, bool flipUVs) {
                 loadTexture(aiTextureType_AMBIENT, mesh, scene, ai_mesh->mMaterialIndex);
                 loadTexture(aiTextureType_NORMALS, mesh, scene, ai_mesh->mMaterialIndex);
                 loadTexture(aiTextureType_OPACITY, mesh, scene, ai_mesh->mMaterialIndex);
+                loadTexture(aiTextureType_SHININESS, mesh, scene, ai_mesh->mMaterialIndex);
                 if (mesh.textures.empty()) {
                     mesh.hasTexCoords = false;
                     mesh.hasTexture = false;
@@ -64,6 +66,7 @@ bool Model::loadModel(std::string path, bool hasSingleMesh, bool flipUVs) {
             loadTexture(aiTextureType_AMBIENT, singleMesh, scene, ai_mesh->mMaterialIndex);
             loadTexture(aiTextureType_NORMALS, singleMesh, scene, ai_mesh->mMaterialIndex);
             loadTexture(aiTextureType_OPACITY, singleMesh, scene, ai_mesh->mMaterialIndex);
+            loadTexture(aiTextureType_SHININESS, singleMesh, scene, ai_mesh->mMaterialIndex);
             if (singleMesh.textures.empty()) {
                 singleMesh.hasTexCoords = false;
                 singleMesh.hasTexture = false;
@@ -119,7 +122,7 @@ void Model::drawOcclusionCulling(Shader& shader, GLuint boxVAO, glm::mat4& view,
                 glBindVertexArray(0);
             }
         } else {
-            meshes.at(i).draw(shader, false, 1);
+            meshes.at(i).draw(shader, false, 1, hasPBR);
         }
         glEndQuery(GL_ANY_SAMPLES_PASSED);
     }
@@ -193,7 +196,7 @@ void Model::setUpMesh(aiMesh* ai_mesh, Mesh& mesh, const aiScene* scene, unsigne
     aiColor3D inSpecular(1.0f, 1.0f, 1.0f);
     if (material) material->Get(AI_MATKEY_COLOR_SPECULAR, inSpecular);
     mesh.color_specular = glm::vec3(inSpecular.r, inSpecular.g, inSpecular.b);
-    float inSpecularHighlight = 0.0f;
+    float inSpecularHighlight = 50.0f;
     if (material) material->Get(AI_MATKEY_SHININESS, inSpecularHighlight);
     mesh.specularHighlight = inSpecularHighlight;
     //fill vertex array
@@ -260,7 +263,7 @@ void Model::setUpBuffers(Mesh& mesh)
     mesh.indices.resize(0);
 }
 
-void Mesh::draw(Shader& shader, bool instanced, GLuint numInstances) {
+void Mesh::draw(Shader& shader, bool instanced, GLuint numInstances, bool hasPBR) {
     //must compile shader first
     //set model, view, projection uniforms before calling this function
     glBindVertexArray(vao);
@@ -270,7 +273,9 @@ void Mesh::draw(Shader& shader, bool instanced, GLuint numInstances) {
     shader.setBool("containsAmbient", GL_FALSE);
     shader.setBool("containsNormal", GL_FALSE);
     shader.setBool("containsAlpha", GL_FALSE);
+    shader.setBool("containsRoughness", GL_FALSE);
     shader.setFloat("specularHighlight", specularHighlight);
+    shader.setBool("hasPBR", hasPBR);
     if (hasTexture && hasTexCoords) {
         int diffuseNum = 0, specularNum = 0, ambientNum = 0, numTextures = 0, normalNum = 0;
         for (Texture& texture : textures) {
@@ -295,13 +300,15 @@ void Mesh::draw(Shader& shader, bool instanced, GLuint numInstances) {
                 numTextures++;
                 break;
             case aiTextureType_AMBIENT:
-                texName = "texture_ambient" + std::to_string(ambientNum);
-                glActiveTexture(GL_TEXTURE0 + numTextures);
-                glBindTexture(GL_TEXTURE_2D, texture.id);
-                shader.setInt(texName, numTextures);
-                shader.setBool("containsAmbient", GL_TRUE);
-                ambientNum++;
-                numTextures++;
+                if (hasPBR) {
+                    texName = "texture_ambient" + std::to_string(ambientNum);
+                    glActiveTexture(GL_TEXTURE0 + numTextures);
+                    glBindTexture(GL_TEXTURE_2D, texture.id);
+                    shader.setInt(texName, numTextures);
+                    shader.setBool("containsAmbient", GL_TRUE);
+                    ambientNum++;
+                    numTextures++;
+                }
                 break;
             case aiTextureType_NORMALS:
                 texName = "texture_normal" + std::to_string(normalNum);
@@ -318,6 +325,14 @@ void Mesh::draw(Shader& shader, bool instanced, GLuint numInstances) {
                 glBindTexture(GL_TEXTURE_2D, texture.id);
                 shader.setInt(texName, numTextures);
                 shader.setBool("containsAlpha", GL_TRUE);
+                numTextures++;
+                break;
+            case aiTextureType_SHININESS:
+                texName = "texture_roughness";
+                glActiveTexture(GL_TEXTURE0 + numTextures);
+                glBindTexture(GL_TEXTURE_2D, texture.id);
+                shader.setInt(texName, numTextures);
+                shader.setBool("containsRoughness", GL_TRUE);
                 numTextures++;
                 break;
             }
@@ -346,7 +361,7 @@ void Model::draw(Shader& shader) {
     shader.setMat4("model", glm::value_ptr(model));
     shader.setBool("instanced", false);
     for (Mesh& mesh : meshes) {
-        mesh.draw(shader, false, 1);
+        mesh.draw(shader, false, 1, hasPBR);
     }
 }
 
@@ -437,7 +452,7 @@ void Model::drawInstances(Shader& shader, GLuint numInstances)
     model = translateMatrix * model;
     shader.setMat4("model", glm::value_ptr(model));
     shader.setBool("instanced", true);
-    meshes.at(0).draw(shader, true, numInstances);
+    meshes.at(0).draw(shader, true, numInstances, hasPBR);
 }
 
 void Model::drawBoundingBoxes(Shader& shader, GLuint boxVAO)

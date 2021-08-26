@@ -59,7 +59,7 @@ public:
 	void updateViewUniformBuffer(glm::mat4& viewMatrix);
 	void updatePointLight(int index, glm::vec4* position, glm::vec4* color, glm::vec4* param);
 	void updateDirectionalLight(glm::vec4* newLightDir, glm::vec4* newLightDirColor);
-	void addModel(std::string path, bool importAsSingleMesh, bool flipUVs);
+	void addModel(std::string path, bool importAsSingleMesh, bool flipUVs, bool hasPBR);
 	void removeModel(int index);
 	void pushPointLight();
 	void popPointLight();
@@ -94,7 +94,8 @@ public:
 	//displaying for debugging purposes
 	enum RenderModes {
 		RENDER_DEFAULT, RENDER_POSITION, RENDER_NORMAL, RENDER_ALBEDO, RENDER_DEPTH,
-		RENDER_SPECULARITY, RENDER_SHADOW, RENDER_CASCADE_DEPTHS, RENDER_WIREFRAME, RENDER_SSAO, NUM_RENDER_MODES
+		RENDER_SPECULARITY, RENDER_SHADOW, RENDER_CASCADE_DEPTHS, RENDER_WIREFRAME, 
+		RENDER_SSAO, RENDER_ROUGHNESS, NUM_RENDER_MODES
 	};
 	enum DisplaySkybox { SKYBOX_DEFAULT, SKYBOX_SHADOW_MAP, NUM_SKYBOXES };
 	enum RenderFrustumOutline { NO_FRUSTUM_OUTLINE, VIEW_FRUSTUM_OUTLINE, CASCADE_FRUSTUM_OUTLINE, NUM_FRUSTUM_OUTLINES };
@@ -157,8 +158,8 @@ private:
 
 	GLuint deferredFramebufferID = 0;
 	GLint deferredFramebufferWidth = SCR_WIDTH, deferredFramebufferHeight = SCR_HEIGHT;
-	std::vector<GLint> deferredAttachmentFormats{ GL_R32F, GL_RGBA16F, GL_RGBA16F, GL_RGBA16F, GL_RGBA16F};
-	std::vector<GLuint> deferredAttachments; //0 = depth, 1 = position, 2 = normal, 3 = albedo, 4 = specular/exponent
+	std::vector<GLint> deferredAttachmentFormats{ GL_R32F, GL_RGBA16F, GL_RGBA16F, GL_RGBA, GL_RGBA};
+	std::vector<GLuint> deferredAttachments; //0 = depth, 1 = position, 2 = normal, 3 = albedo, 4 = specular/roughness
 	std::vector<GLuint> deferredColorTextureIDs;
 	GLuint deferredDepthRenderbufferID = 0;
 	Shader quadShader;

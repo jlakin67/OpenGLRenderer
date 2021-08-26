@@ -165,7 +165,7 @@ void Renderer::setupLightVolumes() {
 	lightVolumeShader.setInt("gAlbedo", 2);
 	lightVolumeShader.setInt("shadowMaps", 3);
 	lightVolumeShader.setInt("noise", 4);
-	lightVolumeShader.setInt("gSpecularExponent", 5);
+	lightVolumeShader.setInt("gSpecularRoughness", 5);
 	lightVolumeShader.setInt("SSAO", 6);
 	lightVolumeShader.setBool("containsShadow", true);
 	lightVolumeShader.setFloat("shadowFar", shadow_far);
@@ -258,7 +258,7 @@ void Renderer::setupDirectionalLightShader() {
 	directionalAmbientShader.setInt("gAlbedo", 2);
 	directionalAmbientShader.setInt("gDepth", 3);
 	directionalAmbientShader.setInt("shadowCascades", 4);
-	directionalAmbientShader.setInt("gSpecularExponent", 5);
+	directionalAmbientShader.setInt("gSpecularRoughness", 5);
 	directionalAmbientShader.setInt("SSAO", 6);
 	directionalAmbientShader.setInt("numShadowCascades", numShadowCascades);
 	glUniform1fv(glGetUniformLocation(directionalAmbientShader.program, "shadowSplitDepths"),
@@ -379,6 +379,10 @@ void Renderer::setupDeferredFramebuffer() {
 		else if (internalFormat == GL_RGBA) type = GL_UNSIGNED_BYTE;
 		else if (internalFormat == GL_R16F || internalFormat == GL_R32F || internalFormat == GL_R8) {
 			type = GL_FLOAT;
+			format = GL_RED;
+		}
+		else if (internalFormat == GL_RED) {
+			type = GL_UNSIGNED_BYTE;
 			format = GL_RED;
 		}
 		glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, deferredFramebufferWidth, deferredFramebufferHeight,
@@ -1063,10 +1067,10 @@ void Renderer::updateDirectionalLight(glm::vec4* newLightDir, glm::vec4* newLigh
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
-void Renderer::addModel(std::string path, bool importAsSingleMesh, bool flipUVs)
+void Renderer::addModel(std::string path, bool importAsSingleMesh, bool flipUVs, bool hasPBR)
 {
 	Model* model = new Model;
-	if (model->loadModel(path, importAsSingleMesh, flipUVs))
+	if (model->loadModel(path, importAsSingleMesh, flipUVs, hasPBR))
 		modelAssets.push_back(model);
 	else delete model;
 	renderPointShadowMaps();
@@ -1492,7 +1496,7 @@ void Renderer::render() {
 			glBindVertexArray(0);
 			glEnable(GL_DEPTH_TEST);
 		}
-		else if (render_mode == RENDER_SPECULARITY) {
+		else if (render_mode == RENDER_SPECULARITY || render_mode == RENDER_ROUGHNESS) {
 			glDisable(GL_DEPTH_TEST);
 			quadShader.useProgram();
 			quadShader.setInt("renderMode", render_mode);

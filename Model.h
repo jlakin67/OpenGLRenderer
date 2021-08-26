@@ -45,7 +45,7 @@ public:
     float specularHighlight;
     glm::vec3 minBox, maxBox;
     GLuint occlusionQueryID;
-    void draw(Shader& shader, bool instanced = false, GLuint numInstances = 1);
+    void draw(Shader& shader, bool instanced = false, GLuint numInstances = 1, bool hasPBR = false);
 };
 
 struct ViewCompare {
@@ -67,9 +67,9 @@ struct ViewCompare {
 class Model {
 public:
     Model() : directory(""), instanceBuf{ 0 }, position(0.0f, 0.0f, 0.0f, 1.0f), 
-        yaw(0.0f), pitch(0.0f), roll(0.0f), scale(1.0f), minBox(0.0f), maxBox(0.0f) {}
+        yaw(0.0f), pitch(0.0f), roll(0.0f), scale(1.0f), minBox(0.0f), maxBox(0.0f), hasPBR(false)  {}
     ~Model();
-    bool loadModel(std::string path, bool hasSingleMesh = false, bool flipUVs = true);
+    bool loadModel(std::string path, bool hasSingleMesh = false, bool flipUVs = true, bool hasPBR = false);
     void draw(Shader& shader);
     void setUpInstances(std::vector<glm::mat4>& models);
     void setupOcclusionQueries();
@@ -86,6 +86,7 @@ public:
     std::vector<GLuint> occlusionQueryIDs;
     glm::vec3 minBox, maxBox;
 private:
+    bool hasPBR;
     void loadTexture(aiTextureType type, Mesh& mesh, const aiScene* scene, unsigned int mMaterialIndex);
     void setUpMesh(aiMesh* ai_mesh, Mesh& mesh, const aiScene* scene, unsigned int mMaterialIndex);
     void setUpBuffers(Mesh& mesh);

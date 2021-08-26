@@ -11,9 +11,10 @@ uniform sampler2D gPosition;
 uniform sampler2D gNormal;
 uniform sampler2D gDepth;
 uniform sampler2D gAlbedo;
-uniform sampler2D gSpecularExponent;
+uniform sampler2D gSpecularRoughness;
 uniform sampler2D SSAO;
-uniform int shadingMode = 0; //0 is blinn-phong
+uniform int shadingMode = 0; //0 is blinn-phong, 1 is PBR
+uniform bool hasPBR = false;
 uniform bool containsShadow = false;
 uniform float ambientStrength = 0.3;
 uniform float shadowFar = 25.0;
@@ -121,7 +122,7 @@ void main() {
 	vec4 position = texture(gPosition, texCoord);
 	if (position.a == 0) discard;
 	vec4 albedo = vec4(texture(gAlbedo, texCoord).rgb, 1.0f);
-	vec4 specularExponent = texture(gSpecularExponent, texCoord);
+	vec4 specularRoughness = texture(gSpecularRoughness, texCoord);
 	vec4 sampledDepth = texture(gDepth, texCoord);
 	float viewDepth = sampledDepth.r;
 	float shadow = 1.0;
@@ -131,7 +132,7 @@ void main() {
 	}
 	if (shadingMode == 0) {
 		vec3 finalColor = vec3(0,0,0);
-		finalColor += shadow*dirLightShading(albedo, specularExponent, normal.xyz, position.xyz);
+		finalColor += shadow*dirLightShading(albedo, specularRoughness, normal.xyz, position.xyz);
 		finalColor += ao*ambientStrength*albedo.rgb;
 		FragColor = vec4(finalColor, 1.0f);
 	} 

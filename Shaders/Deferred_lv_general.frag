@@ -9,9 +9,10 @@ uniform sampler2D gPosition;
 uniform sampler2D gNormal;
 uniform sampler2D gDepth;
 uniform sampler2D gAlbedo;
-uniform sampler2D gSpecularExponent;
+uniform sampler2D gSpecularRoughness;
 uniform sampler2D SSAO;
 uniform bool containsShadow = false;
+uniform bool hasPBR = false;
 uniform samplerCubeArrayShadow shadowMaps;
 uniform float ambientStrength = 0.3;
 uniform float shadowFar = 25.0;
@@ -91,7 +92,7 @@ void main() {
 	if (position.a == 0) discard;
 	float volumeScale = 1.0f - smoothstep((7.0/8.0)*light_model[0][0], light_model[0][0], length(position - light_model[3]));
 	vec4 albedo = vec4(texture(gAlbedo, texCoord).rgb, 1.0f);
-	vec4 specularExponent = texture(gSpecularExponent, texCoord);
+	vec4 specularRoughness = texture(gSpecularRoughness, texCoord);
 	float shadow = 1.0;
 	//float ao = texture(SSAO, texCoord).r;
 	if (containsShadow) {
@@ -111,7 +112,7 @@ void main() {
 		vec3 finalColor = vec3(0,0,0);
 		vec4 param = lightParam[instanceID];
 		finalColor += volumeScale*shadow*pointLightShading(lightPos[instanceID].xyz, lightColor[instanceID], albedo, 
-		normal.xyz, specularExponent, position.xyz, param);
+		normal.xyz, specularRoughness, position.xyz, param);
 		FragColor = vec4(finalColor, 1.0);
 	} else FragColor = vec4(0.2f, 0.2f, 0.2f, 1.0f);
 }
