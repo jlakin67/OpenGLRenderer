@@ -501,7 +501,7 @@ void Renderer::setupTestSceneLights() {
 	numShadowedLights = 2;
 	lightPos.push_back(glm::vec4(3.0, 3.0, 3.0, 1.0));
 	lightPos.push_back(glm::vec4(1.94, 1.65, -2.38, 1.0));
-	lightColor.push_back(glm::vec4(0.6, 0.6, 0.6, 1.0));
+	lightColor.push_back(glm::vec4(3.0, 3.0, 3.0, 1.0));
 	lightColor.push_back(glm::vec4(0.6, 0.6, 0.6, 1.0));
 	lightParam.push_back(glm::vec4(lightConstant, lightLinear, lightQuadratic, specularExponent));
 	lightParam.push_back(glm::vec4(lightConstant, lightLinear, lightQuadratic, specularExponent));
@@ -509,8 +509,10 @@ void Renderer::setupTestSceneLights() {
 		sin(lightDirTheta),
 		-sin(lightDirPhi) * cos(lightDirTheta),
 		0.0f);
-	lightDirColor = glm::vec4(0.2f, 0.2f, 0.2f, 1.0f);
+	lightDirColor = glm::vec4(5.0f, 5.0f, 5.0f, 1.0f);
 	setupLightVolumes();
+	ambientStrength = 0.09f;
+	exposure = 5.04f;
 	//theta = 1.5555
 }
 
@@ -661,6 +663,7 @@ void Renderer::renderDeferredPass()
 		ViewCompareModel compareFunc{ view };
 		std::sort(modelAssets.begin(), modelAssets.end(), compareFunc);
 	}
+	modelShader.useProgram();
 	for (int i = 0; i < modelAssets.size(); i++) {
 		Model* curModel = modelAssets.at(i);
 		if (useOcclusionCulling) curModel->drawOcclusionCulling(modelShader, cubeVAO, view, occlusionShader);
@@ -844,10 +847,13 @@ void Renderer::renderPointShadowMaps()
 	glViewport(0, 0, shadowWidth, shadowHeight);
 	glClearDepth(1.0f);
 	glClear(GL_DEPTH_BUFFER_BIT);
+	//glEnable(GL_CULL_FACE);
+	//glCullFace(GL_BACK);
 	for (int i = 0; i < modelAssets.size(); i++) {
 		Model* curModel = modelAssets.at(i);
 		curModel->draw(shadowMapShader);
 	}
+	//glDisable(GL_CULL_FACE);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
@@ -881,6 +887,13 @@ void Renderer::renderLightingPass() {
 	glDisable(GL_DEPTH_TEST);
 	//ambient + directional pass
 	directionalAmbientShader.useProgram();
+	directionalAmbientShader.setFloat("ambientStrength", ambientStrength);
+	if (usePBR) {
+		directionalAmbientShader.setInt("shadingMode", 1);
+	}
+	else {
+		directionalAmbientShader.setInt("shadingMode", 0);
+	}
 	glUniformMatrix4fv(glGetUniformLocation(directionalAmbientShader.program, "cascadedShadowMatrices"),
 		numShadowCascades, GL_FALSE, glm::value_ptr(cascadedShadowMatrices[0]));
 	glActiveTexture(GL_TEXTURE0);
@@ -904,6 +917,12 @@ void Renderer::renderLightingPass() {
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_ONE, GL_ONE);
 	lightVolumeShader.useProgram();
+	if (usePBR) {
+		lightVolumeShader.setInt("shadingMode", 1);
+	}
+	else {
+		lightVolumeShader.setInt("shadingMode", 0);
+	}
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK); //cube has clockwise winding
 	glActiveTexture(GL_TEXTURE3);
@@ -918,6 +937,11 @@ void Renderer::renderLightingPass() {
 	glEnable(GL_DEPTH_TEST);
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, deferredFramebufferID);
 	//draw objects not part of deferred pipeline
+	glBlitFramebuffer(
+		0, 0, deferredFramebufferWidth, deferredFramebufferHeight, 0, 0, SCR_WIDTH, SCR_HEIGHT,
+		GL_DEPTH_BUFFER_BIT, GL_NEAREST
+	);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 	glBlitFramebuffer(
 		0, 0, deferredFramebufferWidth, deferredFramebufferHeight, 0, 0, SCR_WIDTH, SCR_HEIGHT,
 		GL_DEPTH_BUFFER_BIT, GL_NEAREST
@@ -976,12 +1000,11 @@ void Renderer::drawSkybox() {
 }
 
 void Renderer::drawMiscObjects() {
-	testAxis.draw();
+	glBindFramebuffer(GL_FRAMEBUFFER, postprocessFramebufferID);
 	lightDisplayShader.useProgram();
 	glBindVertexArray(cubeVAO);
 	glDrawArraysInstanced(GL_TRIANGLES, 0, 36, numPointLights);
 	glBindVertexArray(0);
-	drawSkybox();
 }
 
 void Renderer::fillShadowCascadeBuffer() {
@@ -1404,11 +1427,11 @@ void Renderer::render() {
 			glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
 			renderLightingPass();
 			drawMiscObjects();
-			if (frustum_outline_mode != NO_FRUSTUM_OUTLINE) drawFrustums();
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 			glEnable(GL_FRAMEBUFFER_SRGB);
 			glDisable(GL_DEPTH_TEST);
 			postprocessShader.useProgram();
+			postprocessShader.setFloat("exposure", exposure);
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, postprocessColorTextureID);
 			glBindVertexArray(quadVAO);
@@ -1416,7 +1439,10 @@ void Renderer::render() {
 			glBindVertexArray(0);
 			glEnable(GL_DEPTH_TEST);
 			glBindTexture(GL_TEXTURE_2D, 0);
+			drawSkybox();
 			glDisable(GL_FRAMEBUFFER_SRGB);
+			if (frustum_outline_mode != NO_FRUSTUM_OUTLINE) drawFrustums();
+			testAxis.draw();
 		}
 		else if (render_mode == RENDER_SHADOW) {
 			renderShadowMapCascades();
@@ -1547,9 +1573,12 @@ std::vector<glm::vec4> Renderer::lightColor;
 std::vector<glm::vec4> Renderer::lightParam;
 int Renderer::numSSAOSamples = 23;
 float Renderer::SSAOSampleRadius = 0.38f;
+float Renderer::exposure = 1.0f;
+float Renderer::ambientStrength = 0.01f;
 bool Renderer::showBlur = false;
 bool Renderer::drawBoundingBoxes = false;
 bool Renderer::useOcclusionCulling = true;
+bool Renderer::usePBR = false;
 
 //clockwise winding order
 const GLfloat cube_vertices[108]{

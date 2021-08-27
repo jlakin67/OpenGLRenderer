@@ -87,9 +87,12 @@ public:
 	static std::vector<Model*> modelAssets;
 	static int numSSAOSamples;
 	static float SSAOSampleRadius;
+	static float exposure;
+	static float ambientStrength;
 	static bool showBlur;
 	static bool drawBoundingBoxes;
 	static bool useOcclusionCulling;
+	static bool usePBR;
 
 	//displaying for debugging purposes
 	enum RenderModes {

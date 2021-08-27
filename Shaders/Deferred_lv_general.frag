@@ -73,12 +73,15 @@ vec4 specularExponent, vec3 position, vec4 param) {
 	float lightQuadratic = param.z;
 	vec3 lightDir = normalize(lightPos - position);
 	float distance = length(lightPos - position);
+	float NdotL = dot(lightDir, normal);
 	float attenuation = 1 / (lightConstant + (lightLinear*distance) + (lightQuadratic*distance*distance));
-	float diffuseStrength = max(dot(lightDir, normal), 0);
+	float diffuseStrength = max(NdotL, 0);
 	vec3 diffuse = diffuseStrength*lightColor.rgb*diffuseColor.rgb;
 	vec3 viewDir = normalize(cameraPos - position);
 	vec3 halfwayDir = normalize(viewDir+lightDir);
-	float spec = pow(max(dot(normal, halfwayDir), 0), specularExponent.w);
+	float spec;
+	if (NdotL < 0.0f) spec = 0.0f;
+	else spec = pow(max(dot(normal, halfwayDir), 0), specularExponent.w);
 	vec3 specular;
 	specular = spec*specularExponent.rgb*vec3(lightColor);
 	return attenuation*(diffuse+specular);

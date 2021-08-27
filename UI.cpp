@@ -70,6 +70,8 @@ void UI::renderUI()
                 ImGui::DragInt("SSAO Samples:", &numSSAOSamplesInput, 1, 1, maxSamples);
                 numSSAOSamplesChanged = ImGui::IsItemEdited();
                 ImGui::DragFloat("SSAO radius:", &SSAOSampleRadiusInput, 0.01f, 0.00f, 2.5f);
+                ImGui::DragFloat("Exposure:", &Renderer::exposure, 0.01f, 0.1f, 100.0f);
+                ImGui::DragFloat("Ambient strength:", &Renderer::ambientStrength, 0.001f, 0.001f, 100.0f);
                 SSAOSampleRadiusChanged = ImGui::IsItemEdited();
                 if (numSSAOSamplesChanged || SSAOSampleRadiusChanged) 
                     renderer->updateSSAOParameters(numSSAOSamplesInput, SSAOSampleRadiusInput);
@@ -79,7 +81,8 @@ void UI::renderUI()
                 if (Renderer::render_mode == Renderer::RENDER_WIREFRAME) {
                     ImGui::Checkbox("Draw bounding boxes", &Renderer::drawBoundingBoxes);
                 }
-                ImGui::Checkbox("Use occlusion culling", &Renderer::useOcclusionCulling);
+                ImGui::Checkbox("Use occlusion culling", &Renderer::useOcclusionCulling); ImGui::SameLine();
+                ImGui::Checkbox("Use PBR", &Renderer::usePBR);
             }
             if (ImGui::CollapsingHeader("Lights")) {
                 static int lightNum = 0;
@@ -112,7 +115,7 @@ void UI::renderUI()
                     inputLightPosChanged = ImGui::IsItemEdited();
                     ImGui::InputFloat4("Light param:", glm::value_ptr(inputLightParam));
                     inputLightParamChanged = ImGui::IsItemEdited();
-                    ImGui::ColorEdit3("Light color:", glm::value_ptr(inputLightColor));
+                    ImGui::ColorEdit3("Light color:", glm::value_ptr(inputLightColor), ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
                     inputLightColorChanged = ImGui::IsItemEdited();
                     if (inputLightColorChanged || inputLightPosChanged || inputLightParamChanged)
                         renderer->updatePointLight(lightNum, &inputLightPos, &inputLightColor, &inputLightParam);
@@ -167,7 +170,7 @@ void UI::renderUI()
                     0.0f);
                 dirLightAngleChanged = ImGui::IsItemEdited();
                 glm::vec4 newLightDirColor = Renderer::lightDirColor;
-                ImGui::ColorEdit3("Dir light color:", glm::value_ptr(newLightDirColor));
+                ImGui::ColorEdit3("Dir light color:", glm::value_ptr(newLightDirColor), ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
                 dirLightColorChanged = ImGui::IsItemEdited();
                 if (dirLightAngleChanged || dirLightColorChanged) renderer->updateDirectionalLight(&newLightDir, &newLightDirColor);
             }

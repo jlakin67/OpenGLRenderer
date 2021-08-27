@@ -30,7 +30,6 @@ const float top = near * std::tanf(glm::radians(ZOOM));
 const float bottom = -top;
 const float right = top * aspectRatio;
 const float left = -right;
-constexpr GLfloat ambientStrength = 0.1f;
 constexpr GLfloat specularExponent = 16.0f;
 constexpr GLfloat lightLinear = 0.09f;
 constexpr GLfloat lightQuadratic = 0.032f;
