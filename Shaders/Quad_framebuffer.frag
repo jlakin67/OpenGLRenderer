@@ -24,7 +24,7 @@ void main() {
 	} else if (renderMode == 4) {
 		FragColor = vec4(vec3(color.r) / far,1.0);
 	} else if (renderMode == 5) {
-		FragColor = vec4(color.rgb,1.0);
+		FragColor = vec4(vec3(color.r),1.0);
 	} else if (renderMode == 6) {
 		FragColor = vec4(vec3(color.a),1.0);
 	} else if (renderMode == 7) {

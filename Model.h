@@ -45,7 +45,7 @@ public:
     float specularHighlight;
     glm::vec3 minBox, maxBox;
     GLuint occlusionQueryID;
-    void draw(Shader& shader, bool instanced = false, GLuint numInstances = 1, bool hasPBR = false);
+    void draw(Shader& shader, bool instanced = false, GLuint numInstances = 1, bool hasPBR = false, bool usePBR = false);
 };
 
 struct ViewCompare {
@@ -70,12 +70,12 @@ public:
         yaw(0.0f), pitch(0.0f), roll(0.0f), scale(1.0f), minBox(0.0f), maxBox(0.0f), hasPBR(false)  {}
     ~Model();
     bool loadModel(std::string path, bool hasSingleMesh = false, bool flipUVs = true, bool hasPBR = false);
-    void draw(Shader& shader);
+    void draw(Shader& shader, bool usePBR);
     void setUpInstances(std::vector<glm::mat4>& models);
     void setupOcclusionQueries();
     void beginOcclusionQueries(Shader& shader, GLuint boxVAO, glm::mat4& view);
-    void drawOcclusionCulling(Shader& shader, GLuint boxVAO, glm::mat4& view, Shader& occlusionShader);
-    void drawInstances(Shader& shader, GLuint numInstances);
+    void drawOcclusionCulling(Shader& shader, GLuint boxVAO, glm::mat4& view, Shader& occlusionShader, bool usePBR);
+    void drawInstances(Shader& shader, GLuint numInstances, bool usePBR);
     void drawBoundingBoxes(Shader& shader, GLuint boxVAO);
     std::string directory;
     std::vector<Mesh> meshes;

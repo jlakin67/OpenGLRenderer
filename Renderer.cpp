@@ -419,7 +419,7 @@ void Renderer::setupOcclusionQueries()
 	std::sort(modelAssets.begin(), modelAssets.end(), compareFunc);
 	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 	for (int i = 0; i < modelAssets.size(); i++) {
-		modelAssets.at(i)->draw(occlusionShader);
+		modelAssets.at(i)->draw(occlusionShader, usePBR);
 	}
 	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 	for (int i = 0; i < modelAssets.size(); i++) {
@@ -499,10 +499,18 @@ void Renderer::setupSunDisplay() {
 void Renderer::setupTestSceneLights() {
 	numPointLights = 2;
 	numShadowedLights = 2;
+	/*
 	lightPos.push_back(glm::vec4(3.0, 3.0, 3.0, 1.0));
 	lightPos.push_back(glm::vec4(1.94, 1.65, -2.38, 1.0));
 	lightColor.push_back(glm::vec4(3.0, 3.0, 3.0, 1.0));
 	lightColor.push_back(glm::vec4(0.6, 0.6, 0.6, 1.0));
+	lightParam.push_back(glm::vec4(lightConstant, lightLinear, lightQuadratic, specularExponent));
+	lightParam.push_back(glm::vec4(lightConstant, lightLinear, lightQuadratic, specularExponent));
+	*/
+	lightPos.push_back(glm::vec4(0.1, 0.56, 2.17, 1.0));
+	lightPos.push_back(glm::vec4(-0.6, 0.55, -4.67, 1.0));
+	lightColor.push_back(glm::vec4(70, 70, 70, 1.0));
+	lightColor.push_back(glm::vec4(50, 50, 50, 1.0));
 	lightParam.push_back(glm::vec4(lightConstant, lightLinear, lightQuadratic, specularExponent));
 	lightParam.push_back(glm::vec4(lightConstant, lightLinear, lightQuadratic, specularExponent));
 	lightDir = glm::vec4(cos(lightDirTheta) * cos(lightDirPhi),
@@ -513,6 +521,7 @@ void Renderer::setupTestSceneLights() {
 	setupLightVolumes();
 	ambientStrength = 0.09f;
 	exposure = 5.04f;
+	usePBR = true;
 	//theta = 1.5555
 }
 
@@ -627,11 +636,15 @@ void Renderer::setupModelShader()
 
 void Renderer::setupTestSceneModel() {
 	Model* testModel = new Model;
-	testModel->loadModel("C:/Users/juice/Documents/Graphics/Models/sponza/sponza.obj", false, false);
+	testModel->loadModel("C:/Users/juice/Documents/Graphics/Models/backpack/backpack.obj", true, true, true);
 	//testModel->loadModel("C:\\Users\\juice\\Documents\\Graphics\\Models\\backpack\\backpack.obj");
-	testModel->scale = glm::vec3(0.01f, 0.01f, 0.01f);
+	testModel->scale = glm::vec3(1.0f, 1.0f, 1.0f);
 	testModel->position = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 	modelAssets.push_back(testModel);
+	Model* testModel2 = new Model;
+	testModel2->loadModel("C:/Users/juice/Documents/Graphics/Models/grassPlane/grassPlane.obj", true, true, false);
+	testModel2->position = glm::vec4(0.0f, -3.0f, 0.0f, 1.0f);
+	modelAssets.push_back(testModel2);
 }
 
 void Renderer::renderTestSceneDeferredPass() { //old
@@ -641,7 +654,7 @@ void Renderer::renderTestSceneDeferredPass() { //old
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glClearBufferfv(GL_COLOR, 0, &far);
 	glActiveTexture(GL_TEXTURE0);
-	if (!modelAssets.empty()) if (modelAssets.at(0)) modelAssets.at(0)->draw(modelShader);
+	if (!modelAssets.empty()) if (modelAssets.at(0)) modelAssets.at(0)->draw(modelShader, usePBR);
 	planeShader.useProgram();
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, planeTextureID);
@@ -666,8 +679,8 @@ void Renderer::renderDeferredPass()
 	modelShader.useProgram();
 	for (int i = 0; i < modelAssets.size(); i++) {
 		Model* curModel = modelAssets.at(i);
-		if (useOcclusionCulling) curModel->drawOcclusionCulling(modelShader, cubeVAO, view, occlusionShader);
-		else curModel->draw(modelShader);
+		if (useOcclusionCulling) curModel->drawOcclusionCulling(modelShader, cubeVAO, view, occlusionShader, usePBR);
+		else curModel->draw(modelShader, usePBR);
 	}
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
@@ -741,7 +754,7 @@ void Renderer::renderTestSceneShadowMapCascades() { //old
 	glClear(GL_DEPTH_BUFFER_BIT);
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
-	if (!modelAssets.empty()) if (modelAssets.at(0)) modelAssets.at(0)->draw(cascadedShadowMapShader);
+	if (!modelAssets.empty()) if (modelAssets.at(0)) modelAssets.at(0)->draw(cascadedShadowMapShader, usePBR);
 	glBindVertexArray(quadVAO);
 	cascadedShadowMapShader.setMat4("model", glm::value_ptr(quadModel));
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
@@ -820,7 +833,7 @@ void Renderer::renderShadowMapCascades()
 	glCullFace(GL_BACK);
 	for (int i = 0; i < modelAssets.size(); i++) {
 		Model* curModel = modelAssets.at(i);
-		curModel->draw(cascadedShadowMapShader);
+		curModel->draw(cascadedShadowMapShader, usePBR);
 	}
 	glDisable(GL_CULL_FACE);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -832,7 +845,7 @@ void Renderer::renderTestScenePointShadowMaps() { //old
 	glViewport(0, 0, shadowWidth, shadowHeight);
 	glClearDepth(1.0f);
 	glClear(GL_DEPTH_BUFFER_BIT);
-	if (!modelAssets.empty()) if (modelAssets.at(0)) modelAssets.at(0)->draw(shadowMapShader);
+	if (!modelAssets.empty()) if (modelAssets.at(0)) modelAssets.at(0)->draw(shadowMapShader, usePBR);
 	glBindVertexArray(quadVAO);
 	shadowMapShader.setMat4("model", glm::value_ptr(quadModel));
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
@@ -851,7 +864,7 @@ void Renderer::renderPointShadowMaps()
 	//glCullFace(GL_BACK);
 	for (int i = 0; i < modelAssets.size(); i++) {
 		Model* curModel = modelAssets.at(i);
-		curModel->draw(shadowMapShader);
+		curModel->draw(shadowMapShader, usePBR);
 	}
 	//glDisable(GL_CULL_FACE);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -1259,7 +1272,7 @@ void Renderer::renderTestScene() { //old
 		glBindVertexArray(0);
 		glDisable(GL_CULL_FACE);
 		wireframeShader.setBool("instanced", false);
-		if (!modelAssets.empty()) if (modelAssets.at(0)) modelAssets.at(0)->draw(wireframeShader);
+		if (!modelAssets.empty()) if (modelAssets.at(0)) modelAssets.at(0)->draw(wireframeShader, usePBR);
 		glDepthFunc(GL_LEQUAL);
 		sunShader.useProgram();
 		glBindVertexArray(cubeVAO);
@@ -1403,7 +1416,7 @@ void Renderer::render() {
 		for (int i = 0; i < modelAssets.size(); i++) {
 			Model* curModel = modelAssets.at(i);
 			if (drawBoundingBoxes) curModel->drawBoundingBoxes(wireframeShader, cubeVAO);
-			else curModel->draw(wireframeShader);
+			else curModel->draw(wireframeShader, usePBR);
 		}
 		glDepthFunc(GL_LEQUAL);
 		sunShader.useProgram();

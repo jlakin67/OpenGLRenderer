@@ -152,7 +152,7 @@ vec3 constantShadowTexCoordDy, float bias, vec2 filterStep) {
 	*/
 }
 
-float cascadedShadowCalculationPCF(float viewDepth, vec4 worldPosition, int kernelOffset) {
+float cascadedShadowCalculationPCF(float viewDepth, vec4 worldPosition, int kernelOffset, vec3 normal) {
 	float shadow = 1.0f;
 
 	mat4 constantShadowCascadeMatrix = cascadedShadowMatrices[numShadowCascades-1];
@@ -163,8 +163,9 @@ float cascadedShadowCalculationPCF(float viewDepth, vec4 worldPosition, int kern
 	float depthDy = constantShadowTexCoordDy.z;
 	float depthSlope = sqrt(depthDx*depthDx + depthDy*depthDy);
 	float bias = 0.05*depthSlope + 0.005;
-
-
+	//float NdotL = max(dot(normal, lightDir), 0.0f);
+	//bias += mix(0.0f, 0.1, 1.0f - NdotL*NdotL);
+	//bias += 0.2f*smoothstep(0.90,0.99, 1.0f - NdotL);
 	if (kernelOffset < 1) {
 		shadow = cascadedShadowCalculation(viewDepth, worldPosition, constantShadowTexCoordDx, constantShadowTexCoordDy, bias, vec2(0.0f, 0.0f));
 	} else {
@@ -229,11 +230,12 @@ void main() {
 	vec4 position = texture(gPosition, texCoord);
 	if (position.a == 0) discard;
 	vec4 sampledDepth = texture(gDepth, texCoord);
+	vec3 normal = normalize(texture(gNormal, texCoord).rgb);
 	float viewDepth = sampledDepth.r;
 	vec3 finalColor = vec3(1,1,1);
 	
 	//point light shadow calculation
-	
+	/*
 	for (int i = 0; i < numLights; i++) {
 		float shadow = 1.0;
 		if (containsShadow) {
@@ -251,7 +253,7 @@ void main() {
 		}
 		finalColor -= vec3(shadow);
 	}
-	
+	*/
 	
 	if (containsShadow) {
 		//cascaded shadow calculation
@@ -261,7 +263,7 @@ void main() {
 		//int numSamples = int(mix(1, 64, pow( (filterWidth/MAX_DIRECTIONAL_LIGHT_FILTER_WIDTH), 1.0f/3.f) ));
 		int numSamples = 64;
 		//finalColor -= (1 - vec3(cascadedShadowCalculationPoissonDisk(viewDepth, position, filterWidth, numSamples))); //widest is 12, shadow acne gets worse
-		finalColor -= (1 - vec3(cascadedShadowCalculationPCF(viewDepth, position, 2)));
+		finalColor -= (1 - vec3(cascadedShadowCalculationPCF(viewDepth, position, 2, normal)));
 	}
 	
 	

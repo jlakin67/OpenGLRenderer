@@ -3,6 +3,7 @@
 //used with light volumes, ambient with a directional light
 
 #define ONE_OVER_TWO_PI 0.1591549f
+#define ONE_OVER_PI 0.3183010f
 
 out vec4 FragColor;
 in vec2 texCoord;
@@ -13,8 +14,7 @@ uniform sampler2D gDepth;
 uniform sampler2D gAlbedo;
 uniform sampler2D gSpecularRoughness;
 uniform sampler2D SSAO;
-uniform int shadingMode = 0; //0 is blinn-phong, 1 is PBR
-uniform bool hasPBR = false;
+uniform int shadingMode = 0; //0 is blinn-phong, 1 is isotropic BRDF
 uniform bool containsShadow = false;
 uniform float ambientStrength = 0.3;
 uniform float shadowFar = 25.0;
@@ -23,10 +23,10 @@ uniform float shadowSplitDepths[6];
 uniform sampler2DArrayShadow shadowCascades;
 uniform mat4 cascadedShadowMatrices[5];
 
-	mat4 biasMatrix = mat4(vec4(0.5, 0.0, 0.0, 0.0),
-						   vec4(0.0, 0.5, 0.0, 0.0),
-						   vec4(0.0, 0.0, 0.5, 0.0),
-						   vec4(0.5, 0.5, 0.5, 1.0));
+mat4 biasMatrix = mat4(vec4(0.5, 0.0, 0.0, 0.0),
+						vec4(0.0, 0.5, 0.0, 0.0),
+						vec4(0.0, 0.0, 0.5, 0.0),
+						vec4(0.5, 0.5, 0.5, 1.0));
 
 layout (std140, binding = 1) uniform Lights {
 	int numLights;
@@ -116,11 +116,54 @@ vec3 dirLightShading(vec4 diffuseColor, vec4 specularExponent, vec3 normal, vec3
 	return finalColor;
 }
 
+float GGXDistribution(vec3 normal, vec3 h, float roughness) {
+	float alpha = roughness*roughness;
+	float NdotH = max(dot(normal, h), 0.0f);
+	float alpha_squared = alpha*alpha;
+	float denom = (NdotH*NdotH)*(alpha_squared - 1.0f) + 1.0f;
+	denom = denom*denom;
+	float num = ONE_OVER_PI * alpha_squared;
+	return num / denom;
+}
+
+vec3 fresnelSchlick(vec3 F0, float VdotH) {
+	return F0 + (1.0f - F0)*pow(max(1.0f - VdotH, 0.0f), 5.0f);
+}
+
+float SmithG1(float NdotV, float k) {
+	float denom = NdotV*(1.0f - k) + k;
+	return NdotV / denom;
+}
+
+float SchlickSmithG2(float NdotV, float NdotL, float roughness) {
+	float r = (roughness + 1.0f) / 2.0f;
+	float k = (r + 1.0f);
+	k = 0.125f * k * k;
+	return SmithG1(NdotV, k) * SmithG1(NdotL, k);
+}
+
+vec3 dirLightShadingPBR(vec3 albedo, float roughness, float metalness, vec3 normal, 
+						vec3 pos, vec3 lightDir, vec3 cameraPos, vec3 lightColor) {
+	vec3 F0 = vec3(0.04f);
+	F0 = mix(F0, albedo, metalness);
+	vec3 V = normalize(cameraPos - pos);
+	float NdotV = max(dot(normal, V), 0.0f);
+	float NdotL = max(dot(normal, lightDir), 0.0f);
+	vec3 h = normalize(lightDir + V);
+	vec3 kS = fresnelSchlick(F0, max(dot(V, h), 0.0f));
+	vec3 num = kS*GGXDistribution(normal, h, roughness)*SchlickSmithG2(NdotV, NdotL, roughness);
+	float denom = 4.0f*NdotV*NdotL;
+	vec3 spec = num / max(denom, 0.00390625);
+	vec3 kD = 1.0f - kS;
+	kD *= (1.0f - metalness);
+	return (kD*albedo*ONE_OVER_PI + spec)*lightColor*NdotL;
+}
+
 void main() {
 	vec4 normal = texture(gNormal, texCoord);
-	if (normal.a == 0) discard;
+	//if (normal.a == 0) discard;
 	vec4 position = texture(gPosition, texCoord);
-	if (position.a == 0) discard;
+	//if (position.a == 0) discard;
 	vec4 albedo = vec4(texture(gAlbedo, texCoord).rgb, 1.0f);
 	vec4 specularRoughness = texture(gSpecularRoughness, texCoord);
 	vec4 sampledDepth = texture(gDepth, texCoord);
@@ -133,8 +176,16 @@ void main() {
 	if (shadingMode == 0) {
 		vec3 finalColor = vec3(0,0,0);
 		finalColor += shadow*dirLightShading(albedo, specularRoughness, normal.xyz, position.xyz);
-		finalColor += ao*ambientStrength*albedo.rgb;
+		finalColor += mix(vec3(0.0f), ambientStrength*albedo.rgb, ao);
 		FragColor = vec4(finalColor, 1.0f);
-	} 
+	} else if (shadingMode == 1) {
+		vec3 finalColor = vec3(0,0,0);
+		float roughness = specularRoughness.a;
+		if (roughness > 1.0f) roughness = 1.252495f*pow(roughness, -0.31772f); //eyeballing phong exponent to roughness value
+		finalColor += shadow*dirLightShadingPBR(albedo.rgb, roughness, specularRoughness.r, normal.xyz, position.xyz,
+												lightDir, cameraPos, lightDirColor.rgb);
+		finalColor += mix(vec3(0.0f), ambientStrength*albedo.rgb, ao);
+		FragColor = vec4(finalColor, 1.0f);
+	}
 	else FragColor = vec4(0.2f, 0.2f, 0.2f, 1.0f);
 }
