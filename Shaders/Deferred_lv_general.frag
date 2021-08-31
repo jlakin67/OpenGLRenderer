@@ -89,7 +89,7 @@ vec4 specularExponent, vec3 position, vec4 param) {
 
 float GGXDistribution(vec3 normal, vec3 h, float roughness) {
 	float alpha = roughness*roughness;
-	float NdotH = max(dot(normal, h), 0.0f);
+	float NdotH = max(dot(normal, h), 0.00390625f);
 	float alpha_squared = alpha*alpha;
 	float denom = (NdotH*NdotH)*(alpha_squared - 1.0f) + 1.0f;
 	denom = denom*denom;
@@ -98,18 +98,20 @@ float GGXDistribution(vec3 normal, vec3 h, float roughness) {
 }
 
 vec3 fresnelSchlick(vec3 F0, float VdotH) {
-	return F0 + (1.0f - F0)*pow(max(1.0f - VdotH, 0.0f), 5.0f);
+	return F0 + (1.0f - F0)*pow(max(1.0f - VdotH, 0.00390625f), 5.0f);
 }
 
 float SmithG1(float NdotV, float k) {
-	float denom = NdotV*(1.0f - k) + k;
+	float denom = max(NdotV*(1.0f - k) + k, 0.00390625f);
 	return NdotV / denom;
 }
 
 float SchlickSmithG2(float NdotV, float NdotL, float roughness) {
-	float r = (roughness + 1.0f) / 2.0f;
-	float k = (r + 1.0f);
-	k = 0.125f * k * k;
+	//float r = (roughness + 1.0f) / 2.0f;
+	//float k = (r + 1.0f);
+	//k = 0.125f * k * k;
+	float alpha = roughness*roughness;
+	float k = alpha/2.0f;
 	return SmithG1(NdotV, k) * SmithG1(NdotL, k);
 }
 
@@ -119,10 +121,10 @@ vec3 pointLightShadingPBR(vec3 albedo, float roughness, float metalness, vec3 no
 	F0 = mix(F0, albedo, metalness);
 	vec3 V = normalize(cameraPos - pos);
 	vec3 L = normalize(lightPos - pos);
-	float NdotV = max(dot(normal, V), 0.0f);
-	float NdotL = max(dot(normal, L), 0.0f);
+	float NdotV = max(dot(normal, V), 0.00390625f);
+	float NdotL = max(dot(normal, L), 0.00390625f);
 	vec3 h = normalize(L + V);
-	vec3 kS = fresnelSchlick(F0, max(dot(V, h), 0.0f));
+	vec3 kS = fresnelSchlick(F0, max(dot(V, h), 0.00390625f));
 	vec3 num = kS*GGXDistribution(normal, h, roughness)*SchlickSmithG2(NdotV, NdotL, roughness);
 	float denom = 4.0f*NdotV*NdotL;
 	vec3 spec = num / max(denom, 0.00390625f);
@@ -133,7 +135,7 @@ vec3 pointLightShadingPBR(vec3 albedo, float roughness, float metalness, vec3 no
 	float lightQuadratic = param.z;
 	float dist = length(lightPos - pos);
 	float attenuation = 1.0f / (lightConstant + (lightLinear*dist) + (lightQuadratic*dist*dist));
-	return (kD*albedo*ONE_OVER_PI + spec)*lightColor*NdotL*attenuation;
+	return (kD*albedo*ONE_OVER_PI + spec)*lightColor*max(dot(normal, L), 0.0f)*attenuation;
 }
 
 void main() {
@@ -154,7 +156,7 @@ void main() {
 		float dfdy = dFdy(depth);
 		float depthSlope = sqrt(dfdx*dfdx + dfdy*dfdy);
 		float bias = 0.01*depthSlope + 0.015;
-		float diskRadius = 0.01f;
+		float diskRadius = 0.05f;
 		diskRadius = clamp(diskRadius, 0.0f, MAX_POINT_LIGHT_DISK_RADIUS);
 		int numSamples = int(mix(1, 81, pow( (diskRadius/MAX_POINT_LIGHT_DISK_RADIUS), 1.0f/2.2f) ));
 		bias += 0.75*diskRadius;

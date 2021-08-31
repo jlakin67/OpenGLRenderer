@@ -136,7 +136,7 @@ void Renderer::setupLightVolumes() {
 		float linear = lightParam.at(i).y;
 		float quadratic = lightParam.at(i).z;
 		float radius =
-			(-linear + std::sqrtf(linear * linear - 4.0f * quadratic * (constant - (256.0f / 5.0f) * lightMax)))
+			(-linear + std::sqrtf(linear * linear - 4.0f * quadratic * (constant - (256.0f / 5.0f) * (lightMax / (lightMax + exposure)))))
 			/ (2.0f * quadratic);
 		radii.at(i) = radius;
 		model = glm::scale(model, glm::vec3(radius));
@@ -472,6 +472,62 @@ void Renderer::setupSSAO()
 	SSAOBlurShader.setInt("screen", 0);
 }
 
+void Renderer::setupDeinterleavedSSAO() {
+	glGenFramebuffers(1, &deinterleavedSSAOFramebufferID);
+	glBindFramebuffer(GL_FRAMEBUFFER, deinterleavedSSAOFramebufferID);
+	glGenTextures(NUM_INTERLEAVED_NAMES, deinterleavedSSAOTextureIDs);
+	std::vector<GLuint> drawBuffers;
+	for (int i = 0; i < NUM_INTERLEAVED_NAMES; i++) {
+		glBindTexture(GL_TEXTURE_2D, deinterleavedSSAOTextureIDs[i]);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, SCR_WIDTH / 2, SCR_HEIGHT / 2, 0, GL_RED, GL_FLOAT, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, deinterleavedSSAOTextureIDs[i], 0);
+		drawBuffers.push_back(GL_COLOR_ATTACHMENT0 + i);
+	}
+	glDrawBuffers(drawBuffers.size(), drawBuffers.data());
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+		std::cout << "ERROR::FRAMEBUFFER: SSAO deinterleave framebuffer is not complete!" << std::endl;
+		exit(EXIT_FAILURE);
+	}
+	glGenFramebuffers(1, &SSAOFramebufferID);
+	glBindFramebuffer(GL_FRAMEBUFFER, SSAOFramebufferID);
+	glGenTextures(1, &SSAOTextureID);
+	glBindTexture(GL_TEXTURE_2D, SSAOTextureID);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, SCR_WIDTH, SCR_HEIGHT, 0, GL_RED, GL_FLOAT, NULL);
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, SSAOTextureID, 0);
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+		std::cout << "ERROR::FRAMEBUFFER: SSAO reinterleave framebuffer is not complete!" << std::endl;
+		exit(EXIT_FAILURE);
+	}
+	glGenFramebuffers(1, &SSAOBlurFramebufferID);
+	glBindFramebuffer(GL_FRAMEBUFFER, SSAOBlurFramebufferID);
+	glGenTextures(1, &SSAOBlurTextureID);
+	glBindTexture(GL_TEXTURE_2D, SSAOBlurTextureID);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, SCR_WIDTH, SCR_HEIGHT, 0, GL_RED, GL_FLOAT, NULL);
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, SSAOBlurTextureID, 0);
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+		std::cout << "ERROR::FRAMEBUFFER: SSAO blur framebuffer is not complete!" << std::endl;
+		exit(EXIT_FAILURE);
+	}
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	deinterleavedSSAOShader.loadFile("Shaders/Quad_framebuffer.vert", "Shaders/SSAODeinterleaved.frag", "Shaders/SSAODeinterleaved.geom");
+	deinterleavedSSAOShader.useProgram();
+	deinterleavedSSAOShader.setInt("gDepth", 0);
+	deinterleavedSSAOShader.setInt("gPosition", 1);
+	deinterleavedSSAOShader.setInt("gNormal", 2);
+	deinterleavedSSAOShader.setInt("noise", 3);
+	deinterleavedSSAOShader.setInt("numSamples", numSSAOSamples);
+	deinterleavedSSAOShader.setFloat("radius", SSAOSampleRadius);
+}
+
 
 void Renderer::setupLightDisplay() {
 	glBindVertexArray(cubeVAO);
@@ -507,6 +563,7 @@ void Renderer::setupTestSceneLights() {
 	lightParam.push_back(glm::vec4(lightConstant, lightLinear, lightQuadratic, specularExponent));
 	lightParam.push_back(glm::vec4(lightConstant, lightLinear, lightQuadratic, specularExponent));
 	*/
+	/*
 	lightPos.push_back(glm::vec4(0.1, 0.56, 2.17, 1.0));
 	lightPos.push_back(glm::vec4(-0.6, 0.55, -4.67, 1.0));
 	lightColor.push_back(glm::vec4(70, 70, 70, 1.0));
@@ -517,7 +574,19 @@ void Renderer::setupTestSceneLights() {
 		sin(lightDirTheta),
 		-sin(lightDirPhi) * cos(lightDirTheta),
 		0.0f);
-	lightDirColor = glm::vec4(5.0f, 5.0f, 5.0f, 1.0f);
+	lightDirColor = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+	*/
+	lightPos.push_back(glm::vec4(0.1, 0.56, 2.17, 1.0));
+	lightPos.push_back(glm::vec4(-0.6, 0.55, -4.67, 1.0));
+	lightColor.push_back(glm::vec4(70, 70, 70, 1.0));
+	lightColor.push_back(glm::vec4(50, 50, 50, 1.0));
+	lightParam.push_back(glm::vec4(lightConstant, lightLinear, lightQuadratic, specularExponent));
+	lightParam.push_back(glm::vec4(lightConstant, lightLinear, lightQuadratic, specularExponent));
+	lightDir = glm::vec4(cos(lightDirTheta) * cos(lightDirPhi),
+		sin(lightDirTheta),
+		-sin(lightDirPhi) * cos(lightDirTheta),
+		0.0f);
+	lightDirColor = glm::vec4(20.0f, 20.0f, 20.0f, 1.0f);
 	setupLightVolumes();
 	ambientStrength = 0.09f;
 	exposure = 5.04f;
@@ -635,16 +704,28 @@ void Renderer::setupModelShader()
 }
 
 void Renderer::setupTestSceneModel() {
+	/*
 	Model* testModel = new Model;
-	testModel->loadModel("C:/Users/juice/Documents/Graphics/Models/backpack/backpack.obj", true, true, true);
-	//testModel->loadModel("C:\\Users\\juice\\Documents\\Graphics\\Models\\backpack\\backpack.obj");
-	testModel->scale = glm::vec3(1.0f, 1.0f, 1.0f);
-	testModel->position = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+	testModel->loadModel("C:\\Users\\juice\\Documents\\Graphics\\Models\\sponza\\sponza.obj", false, false, false);
+	testModel->scale = glm::vec3(0.01f, 0.01f, 0.01f);
+	modelAssets.push_back(testModel);
+	*/
+	
+	Model* testModel = new Model;
+	testModel->loadModel("C:\\Users\\juice\\Documents\\Graphics\\Models\\Gledista_Triacanthos\\Gledista_Triacanthos_OBJ\\Gledista_Triacanthos.obj", false, false, false);
+	testModel->scale = glm::vec3(0.1f, 0.1f, 0.1f);
+	testModel->position = glm::vec4(0.0f, -3.0f, -8.0f, 1.0f);
 	modelAssets.push_back(testModel);
 	Model* testModel2 = new Model;
-	testModel2->loadModel("C:/Users/juice/Documents/Graphics/Models/grassPlane/grassPlane.obj", true, true, false);
+	testModel2->loadModel("C:/Users/juice/Documents/Graphics/Models/grassPlane/grassPlane.obj", true, false, false);
 	testModel2->position = glm::vec4(0.0f, -3.0f, 0.0f, 1.0f);
 	modelAssets.push_back(testModel2);
+	Model* testModel3 = new Model;
+	testModel3->loadModel("C:\\Users\\juice\\Documents\\Graphics\\Models\\WoodenCabinObj\\WoodenCabinOBJ.obj", false, false, false);
+	testModel3->scale = glm::vec3(0.1f, 0.1f, 0.1f);
+	testModel3->position = glm::vec4(0.0f, -3.0f, 0.0f, 1.0f);
+	modelAssets.push_back(testModel3);
+	
 }
 
 void Renderer::renderTestSceneDeferredPass() { //old
@@ -1061,7 +1142,7 @@ void Renderer::updatePointLight(int index, glm::vec4* position, glm::vec4* color
 	float linear = lightParam.at(index).y;
 	float quadratic = lightParam.at(index).z;
 	float radius =
-		(-linear + std::sqrtf(linear * linear - 4.0f * quadratic * (constant - (256.0f / 5.0f) * lightMax)))
+		(-linear + std::sqrtf(linear * linear - 4.0f * quadratic * (constant - (256.0f / 5.0f) * (lightMax / (lightMax+exposure)) )))
 		/ (2.0f * quadratic);
 	radii.at(index) = radius;
 	lightVolumeModel = glm::scale(lightVolumeModel, glm::vec3(radius));
@@ -1592,6 +1673,7 @@ bool Renderer::showBlur = false;
 bool Renderer::drawBoundingBoxes = false;
 bool Renderer::useOcclusionCulling = true;
 bool Renderer::usePBR = false;
+bool Renderer::useDeinterleavedSSAO = false;
 
 //clockwise winding order
 const GLfloat cube_vertices[108]{

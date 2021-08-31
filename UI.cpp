@@ -83,6 +83,8 @@ void UI::renderUI()
                 }
                 ImGui::Checkbox("Use occlusion culling", &Renderer::useOcclusionCulling); ImGui::SameLine();
                 ImGui::Checkbox("Use PBR", &Renderer::usePBR);
+                ImGui::Checkbox("Use deinterleaved SSAO", &Renderer::useDeinterleavedSSAO);
+                if (ImGui::IsItemEdited()) renderer->updateSSAOParameters(numSSAOSamplesInput, SSAOSampleRadiusInput);
             }
             if (ImGui::CollapsingHeader("Lights")) {
                 static int lightNum = 0;

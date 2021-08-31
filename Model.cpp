@@ -193,7 +193,7 @@ void Model::setUpMesh(aiMesh* ai_mesh, Mesh& mesh, const aiScene* scene, unsigne
     if (material) material->Get(AI_MATKEY_COLOR_DIFFUSE, inColor);
     if (material) material->Get(AI_MATKEY_OPACITY, alpha);
     mesh.color_diffuse = glm::vec4(inColor.r, inColor.g, inColor.b, alpha);
-    aiColor3D inSpecular(1.0f, 1.0f, 1.0f);
+    aiColor3D inSpecular(0.0f, 0.0f, 0.0f);
     if (material) material->Get(AI_MATKEY_COLOR_SPECULAR, inSpecular);
     mesh.color_specular = glm::vec3(inSpecular.r, inSpecular.g, inSpecular.b);
     float inSpecularHighlight = 50.0f;
@@ -290,6 +290,7 @@ void Mesh::draw(Shader& shader, bool instanced, GLuint numInstances, bool hasPBR
                 numTextures++;
                 break;
             case aiTextureType_SPECULAR:
+                if (hasPBR) {
                     texName = "texture_specular" + std::to_string(specularNum);
                     glActiveTexture(GL_TEXTURE0 + numTextures);
                     glBindTexture(GL_TEXTURE_2D, texture.id);
@@ -297,6 +298,7 @@ void Mesh::draw(Shader& shader, bool instanced, GLuint numInstances, bool hasPBR
                     shader.setBool("containsSpecular", GL_TRUE);
                     specularNum++;
                     numTextures++;
+                }
                 break;
             case aiTextureType_AMBIENT:
                 if (hasPBR) {

@@ -27,7 +27,7 @@ uniform sampler2D texture_alpha;
 uniform sampler2D texture_roughness;
 uniform vec4 color = vec4(0.6f,0.6f,0.6f,1.0f);
 uniform float specularHighlight = 50.0f;
-uniform vec3 specularColor = vec3(1.0f, 1.0f, 1.0f);
+uniform vec3 specularColor = vec3(0.0f, 0.0f, 0.0f);
 
 const mat3 TBN = mat3(tangent, bitangent, normal);
 

@@ -93,6 +93,7 @@ public:
 	static bool drawBoundingBoxes;
 	static bool useOcclusionCulling;
 	static bool usePBR;
+	static bool useDeinterleavedSSAO;
 
 	//displaying for debugging purposes
 	enum RenderModes {
@@ -173,6 +174,12 @@ private:
 	Shader SSAOShader;
 	Shader SSAOBlurShader;
 	void setupSSAO();
+
+	enum DeinterleavedNames{UPPER_LEFT_PIXEL, UPPER_RIGHT_PIXEL, LOWER_LEFT_PIXEL, LOWER_RIGHT_PIXEL, NUM_INTERLEAVED_NAMES};
+	GLuint deinterleavedSSAOTextureIDs[NUM_INTERLEAVED_NAMES];
+	GLuint deinterleavedSSAOFramebufferID = 0;
+	Shader deinterleavedSSAOShader, reinterleavedSSAOShader;
+	void setupDeinterleavedSSAO();
 
 	//gamma correction, tone mapping, anti-aliasing
 	GLuint postprocessFramebufferID = 0;

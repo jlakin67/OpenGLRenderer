@@ -34,7 +34,7 @@ constexpr GLfloat specularExponent = 16.0f;
 constexpr GLfloat lightLinear = 0.09f;
 constexpr GLfloat lightQuadratic = 0.032f;
 constexpr GLfloat lightConstant = 1.0f;
-constexpr float lightDirTheta = 1.555f; //zenith angle, measured from x-y axis, where positive y axis points 90 degrees
+constexpr float lightDirTheta = 2.372f; //zenith angle, measured from x-y axis, where positive y axis points 90 degrees
 constexpr float lightDirPhi = glm::radians(-90.0f); //azimuth angle, counterclockwise, where positive x axis points 0 degrees
 constexpr GLfloat maxAnisotropy = 16.0f;
 extern const GLfloat cube_vertices[108];

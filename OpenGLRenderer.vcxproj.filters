@@ -286,5 +286,17 @@
     <None Include="Shaders\Null.frag">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="Shaders\SSAODeinterleaved.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\SSAODeinterleaved.geom">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\SSAOReinterleaved.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\SSAOReinterleaved.geom">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>
