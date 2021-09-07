@@ -12,6 +12,8 @@ layout (std140, binding = 0) uniform Matrices {
 	uniform mat4 projection;
 };
 
+flat in int layer;
+
 layout (std140, binding = 3) uniform Samples {
 	vec2 poissonDisk[81]; //.1 disk radius, between 0 and 1
 	vec3 poissonDiskSphere[81]; //.05 disk radius
@@ -28,13 +30,17 @@ uniform float bias = 0.05f;
 uniform int numSamples = 25;
 
 //upper left, upper right, lower left, lower right
-const vec2 texelStep[4] = {vec2(-1.0f, 1.0f), vec2(1.0f, 1.0f), vec2(-1.0f, -1.0f), vec2(1.0f, -1.0f)};
+//const vec2 texelStep[4] = {vec2(-1.0f, 1.0f), vec2(1.0f, 1.0f), vec2(-1.0f, -1.0f), vec2(1.0f, -1.0f)};
+const ivec2 texelStep[4] = {ivec2(0,1), ivec2(1,1), ivec2(0,0), ivec2(1,0)};
+
+uniform vec2 screenDim = vec2(800, 450);
 
 void main() {
-	vec2 newTexCoord = texCoordIn + texelStep[gl_Layer]/textureSize(gDepth, 0);
-	vec4 worldPosition = vec4(texture(gPosition, newTexCoord).xyz, 1.0f);
-	vec3 normal = normalize(texture(gNormal, newTexCoord).xyz); 
-	vec2 randomAngles = texelFetch(noise, ivec3(gl_Layer, 0, 0), 0).xy;
+	//vec2 newTexCoord = texCoordIn + texelStep[gl_Layer]/textureSize(gDepth, 0);
+	ivec2 newTexCoord = ivec2(2.0f*gl_FragCoord.xy) + texelStep[layer];
+	vec4 worldPosition = vec4(texelFetch(gPosition, newTexCoord, 0).xyz, 1.0f);
+	vec3 normal = normalize(texelFetch(gNormal, newTexCoord, 0).xyz); 
+	vec2 randomAngles = texelFetch(noise, ivec3(layer, layer, layer), 0).xy;
 	randomAngles.y -= PI_OVER_TWO; //sphere to hemisphere
 	vec3 randomDir = vec3(cos(randomAngles.x)*sin(randomAngles.y),
 						  sin(randomAngles.x)*sin(randomAngles.y),
