@@ -28,7 +28,7 @@ uniform float bias = 0.05f;
 uniform int numSamples = 25;
 
 //upper left, upper right, lower left, lower right
-const vec2 texelStep[4] = {vec2(-0.5f, 0.5f), vec2(0.5f, 0.5f), vec2(-0.5f, -0.5f), vec2(0.5f, -0.5f)};
+const vec2 texelStep[4] = {vec2(-1.0f, 1.0f), vec2(1.0f, 1.0f), vec2(-1.0f, -1.0f), vec2(1.0f, -1.0f)};
 
 void main() {
 	vec2 newTexCoord = texCoordIn + texelStep[gl_Layer]/textureSize(gDepth, 0);

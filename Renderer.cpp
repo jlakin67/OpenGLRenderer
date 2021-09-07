@@ -490,32 +490,7 @@ void Renderer::setupDeinterleavedSSAO() {
 		std::cout << "ERROR::FRAMEBUFFER: SSAO deinterleave framebuffer is not complete!" << std::endl;
 		exit(EXIT_FAILURE);
 	}
-	glGenFramebuffers(1, &SSAOFramebufferID);
-	glBindFramebuffer(GL_FRAMEBUFFER, SSAOFramebufferID);
-	glGenTextures(1, &SSAOTextureID);
-	glBindTexture(GL_TEXTURE_2D, SSAOTextureID);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, SCR_WIDTH, SCR_HEIGHT, 0, GL_RED, GL_FLOAT, NULL);
-	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, SSAOTextureID, 0);
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-		std::cout << "ERROR::FRAMEBUFFER: SSAO reinterleave framebuffer is not complete!" << std::endl;
-		exit(EXIT_FAILURE);
-	}
-	glGenFramebuffers(1, &SSAOBlurFramebufferID);
-	glBindFramebuffer(GL_FRAMEBUFFER, SSAOBlurFramebufferID);
-	glGenTextures(1, &SSAOBlurTextureID);
-	glBindTexture(GL_TEXTURE_2D, SSAOBlurTextureID);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, SCR_WIDTH, SCR_HEIGHT, 0, GL_RED, GL_FLOAT, NULL);
-	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, SSAOBlurTextureID, 0);
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-		std::cout << "ERROR::FRAMEBUFFER: SSAO blur framebuffer is not complete!" << std::endl;
-		exit(EXIT_FAILURE);
-	}
+
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glBindTexture(GL_TEXTURE_2D, 0);
 	deinterleavedSSAOShader.loadFile("Shaders/Quad_framebuffer.vert", "Shaders/SSAODeinterleaved.frag", "Shaders/SSAODeinterleaved.geom");
@@ -526,6 +501,14 @@ void Renderer::setupDeinterleavedSSAO() {
 	deinterleavedSSAOShader.setInt("noise", 3);
 	deinterleavedSSAOShader.setInt("numSamples", numSSAOSamples);
 	deinterleavedSSAOShader.setFloat("radius", SSAOSampleRadius);
+	reinterleavedSSAOShader.loadFile("Shaders/Quad_framebuffer.vert", "Shaders/SSAOReinterleaved.frag");
+	reinterleavedSSAOShader.useProgram();
+	reinterleavedSSAOShader.setInt("upperLeft", 0);
+	reinterleavedSSAOShader.setInt("upperRight", 1);
+	reinterleavedSSAOShader.setInt("lowerLeft", 2);
+	reinterleavedSSAOShader.setInt("lowerRight", 3);
+	glm::vec2 screenDim(SCR_WIDTH, SCR_HEIGHT);
+	reinterleavedSSAOShader.setVec2("screenDim", glm::value_ptr(screenDim));
 }
 
 
@@ -953,26 +936,69 @@ void Renderer::renderPointShadowMaps()
 
 void Renderer::renderSSAO() {
 	glBindFramebuffer(GL_FRAMEBUFFER, SSAOFramebufferID);
-	SSAOShader.useProgram();
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, deferredColorTextureIDs.at(0)); //gDepth
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, deferredColorTextureIDs.at(1)); //gPosition
-	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D, deferredColorTextureIDs.at(2)); //gNormal
-	glActiveTexture(GL_TEXTURE3);
-	glBindTexture(GL_TEXTURE_3D, randomTextureID);
-	glBindVertexArray(quadVAO);
-	glDisable(GL_DEPTH_TEST);
-	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-	glBindFramebuffer(GL_FRAMEBUFFER, SSAOBlurFramebufferID);
-	SSAOBlurShader.useProgram();
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, SSAOTextureID);
-	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-	glEnable(GL_DEPTH_TEST);
-	glBindVertexArray(0);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glClear(GL_COLOR_BUFFER_BIT);
+	if (!useDeinterleavedSSAO) {
+		//glBindFramebuffer(GL_FRAMEBUFFER, SSAOFramebufferID);
+		glClear(GL_COLOR_BUFFER_BIT);
+		SSAOShader.useProgram();
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, deferredColorTextureIDs.at(0)); //gDepth
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, deferredColorTextureIDs.at(1)); //gPosition
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, deferredColorTextureIDs.at(2)); //gNormal
+		glActiveTexture(GL_TEXTURE3);
+		glBindTexture(GL_TEXTURE_3D, randomTextureID);
+		glBindVertexArray(quadVAO);
+		glDisable(GL_DEPTH_TEST);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		glBindFramebuffer(GL_FRAMEBUFFER, SSAOBlurFramebufferID);
+		SSAOBlurShader.useProgram();
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, SSAOTextureID);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		glEnable(GL_DEPTH_TEST);
+		glBindVertexArray(0);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
+	else {
+		glBindFramebuffer(GL_FRAMEBUFFER, deinterleavedSSAOFramebufferID);
+		glClear(GL_COLOR_BUFFER_BIT);
+		deinterleavedSSAOShader.useProgram();
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, deferredColorTextureIDs.at(0)); //gDepth
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, deferredColorTextureIDs.at(1)); //gPosition
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, deferredColorTextureIDs.at(2)); //gNormal
+		glActiveTexture(GL_TEXTURE3);
+		glBindTexture(GL_TEXTURE_3D, randomTextureID);
+		glBindVertexArray(quadVAO);
+		glDisable(GL_DEPTH_TEST);
+		glViewport(0, 0, SCR_WIDTH / 2.0f, SCR_HEIGHT / 2.0f);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+
+		reinterleavedSSAOShader.useProgram();
+		glBindFramebuffer(GL_FRAMEBUFFER, SSAOFramebufferID);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, deinterleavedSSAOTextureIDs[UPPER_LEFT_PIXEL]);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, deinterleavedSSAOTextureIDs[UPPER_RIGHT_PIXEL]);
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, deinterleavedSSAOTextureIDs[LOWER_LEFT_PIXEL]);
+		glActiveTexture(GL_TEXTURE3);
+		glBindTexture(GL_TEXTURE_2D, deinterleavedSSAOTextureIDs[LOWER_RIGHT_PIXEL]);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		glBindFramebuffer(GL_FRAMEBUFFER, SSAOBlurFramebufferID);
+		SSAOBlurShader.useProgram();
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, SSAOTextureID);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		glEnable(GL_DEPTH_TEST);
+		glBindVertexArray(0);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
 }
 
 void Renderer::renderLightingPass() {
@@ -1287,6 +1313,9 @@ void Renderer::updateSSAOParameters(int numSamples, float radius) {
 	SSAOShader.useProgram();
 	SSAOShader.setInt("numSamples", numSSAOSamples);
 	SSAOShader.setFloat("radius", SSAOSampleRadius);
+	deinterleavedSSAOShader.useProgram();
+	deinterleavedSSAOShader.setInt("numSamples", numSSAOSamples);
+	deinterleavedSSAOShader.setFloat("radius", SSAOSampleRadius);
 }
 
 void Renderer::setupTestScene() { //old
@@ -1327,6 +1356,7 @@ void Renderer::setup()
 	setupDeferredFramebuffer();
 	setupPostprocessFramebuffer();
 	setupSSAO();
+	setupDeinterleavedSSAO();
 	setupTestAxis();
 	setupLightDisplay();
 	setupShadowTesting();

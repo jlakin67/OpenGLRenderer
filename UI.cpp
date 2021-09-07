@@ -70,11 +70,9 @@ void UI::renderUI()
                 ImGui::DragInt("SSAO Samples:", &numSSAOSamplesInput, 1, 1, maxSamples);
                 numSSAOSamplesChanged = ImGui::IsItemEdited();
                 ImGui::DragFloat("SSAO radius:", &SSAOSampleRadiusInput, 0.01f, 0.00f, 2.5f);
+                SSAOSampleRadiusChanged = ImGui::IsItemEdited();
                 ImGui::DragFloat("Exposure:", &Renderer::exposure, 0.01f, 0.1f, 100.0f);
                 ImGui::DragFloat("Ambient strength:", &Renderer::ambientStrength, 0.001f, 0.001f, 100.0f);
-                SSAOSampleRadiusChanged = ImGui::IsItemEdited();
-                if (numSSAOSamplesChanged || SSAOSampleRadiusChanged) 
-                    renderer->updateSSAOParameters(numSSAOSamplesInput, SSAOSampleRadiusInput);
                 if (Renderer::render_mode == Renderer::RENDER_SSAO) {
                     ImGui::Checkbox("Show blur", &Renderer::showBlur);
                 }
@@ -84,7 +82,8 @@ void UI::renderUI()
                 ImGui::Checkbox("Use occlusion culling", &Renderer::useOcclusionCulling); ImGui::SameLine();
                 ImGui::Checkbox("Use PBR", &Renderer::usePBR);
                 ImGui::Checkbox("Use deinterleaved SSAO", &Renderer::useDeinterleavedSSAO);
-                if (ImGui::IsItemEdited()) renderer->updateSSAOParameters(numSSAOSamplesInput, SSAOSampleRadiusInput);
+                if (numSSAOSamplesChanged || SSAOSampleRadiusChanged)
+                    renderer->updateSSAOParameters(numSSAOSamplesInput, SSAOSampleRadiusInput);
             }
             if (ImGui::CollapsingHeader("Lights")) {
                 static int lightNum = 0;

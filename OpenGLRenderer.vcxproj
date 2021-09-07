@@ -235,7 +235,6 @@
     <None Include="Shaders\SSAODeinterleaved.frag" />
     <None Include="Shaders\SSAODeinterleaved.geom" />
     <None Include="Shaders\SSAOReinterleaved.frag" />
-    <None Include="Shaders\SSAOReinterleaved.geom" />
     <None Include="Shaders\Sun.frag" />
     <None Include="Shaders\Sun.vert" />
     <None Include="Shaders\Wireframe.frag" />
