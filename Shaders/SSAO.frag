@@ -30,7 +30,10 @@ uniform int numSamples = 25;
 void main() {
 	vec4 worldPosition = vec4(texture(gPosition, texCoord).xyz, 1.0f);
 	vec3 normal = normalize(texture(gNormal, texCoord).xyz); 
+	//ivec2 FragID = ivec2(gl_FragCoord.xy/2.0f);
+	//ivec2 texOffset = ivec2(mod(FragID, ivec2(2,2)));
 	vec2 randomAngles = texture(noise, 32.0f*sin(100.0f*worldPosition.xyz) + 32.0f).xy;
+	//vec2 randomAngles = texelFetch(noise, ivec3(texOffset.x), 0).xy;
 	randomAngles.y -= PI_OVER_TWO; //sphere to hemisphere
 	vec3 randomDir = vec3(cos(randomAngles.x)*sin(randomAngles.y),
 						  sin(randomAngles.x)*sin(randomAngles.y),

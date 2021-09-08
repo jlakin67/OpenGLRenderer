@@ -490,10 +490,9 @@ void Renderer::setupDeinterleavedSSAO() {
 		std::cout << "ERROR::FRAMEBUFFER: SSAO deinterleave framebuffer is not complete!" << std::endl;
 		exit(EXIT_FAILURE);
 	}
-
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glBindTexture(GL_TEXTURE_2D, 0);
-	deinterleavedSSAOShader.loadFile("Shaders/Quad_framebuffer.vert", "Shaders/SSAODeinterleaved.frag", "Shaders/SSAODeinterleaved.geom");
+	deinterleavedSSAOShader.loadFile("Shaders/Quad_framebuffer.vert", "Shaders/SSAODeinterleaved.frag");
 	deinterleavedSSAOShader.useProgram();
 	deinterleavedSSAOShader.setInt("gDepth", 0);
 	deinterleavedSSAOShader.setInt("gPosition", 1);
@@ -507,6 +506,7 @@ void Renderer::setupDeinterleavedSSAO() {
 	reinterleavedSSAOShader.setInt("upperRight", 1);
 	reinterleavedSSAOShader.setInt("lowerLeft", 2);
 	reinterleavedSSAOShader.setInt("lowerRight", 3);
+
 	glm::vec2 screenDim(SCR_WIDTH, SCR_HEIGHT);
 	reinterleavedSSAOShader.setVec2("screenDim", glm::value_ptr(screenDim));
 }
@@ -939,7 +939,7 @@ void Renderer::renderSSAO() {
 	glClear(GL_COLOR_BUFFER_BIT);
 	if (!useDeinterleavedSSAO) {
 		//glBindFramebuffer(GL_FRAMEBUFFER, SSAOFramebufferID);
-		glClear(GL_COLOR_BUFFER_BIT);
+		//glClear(GL_COLOR_BUFFER_BIT);
 		SSAOShader.useProgram();
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, deferredColorTextureIDs.at(0)); //gDepth
@@ -962,9 +962,8 @@ void Renderer::renderSSAO() {
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	}
 	else {
-		glBindFramebuffer(GL_FRAMEBUFFER, deinterleavedSSAOFramebufferID);
-		glClear(GL_COLOR_BUFFER_BIT);
-		deinterleavedSSAOShader.useProgram();
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_ONE, GL_ONE);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, deferredColorTextureIDs.at(0)); //gDepth
 		glActiveTexture(GL_TEXTURE1);
@@ -973,11 +972,25 @@ void Renderer::renderSSAO() {
 		glBindTexture(GL_TEXTURE_2D, deferredColorTextureIDs.at(2)); //gNormal
 		glActiveTexture(GL_TEXTURE3);
 		glBindTexture(GL_TEXTURE_3D, randomTextureID);
+		glBindFramebuffer(GL_FRAMEBUFFER, deinterleavedSSAOFramebufferID);
+		glClear(GL_COLOR_BUFFER_BIT);
+		deinterleavedSSAOShader.useProgram();		
 		glBindVertexArray(quadVAO);
 		glDisable(GL_DEPTH_TEST);
 		glViewport(0, 0, SCR_WIDTH / 2.0f, SCR_HEIGHT / 2.0f);
+		deinterleavedSSAOShader.setInt("offset", 0);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		//glMemoryBarrier(GL_ALL_BARRIER_BITS);
+		deinterleavedSSAOShader.setInt("offset", 1);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		//glMemoryBarrier(GL_ALL_BARRIER_BITS);
+		deinterleavedSSAOShader.setInt("offset", 2);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		//glMemoryBarrier(GL_ALL_BARRIER_BITS);
+		deinterleavedSSAOShader.setInt("offset", 3);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 		glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+		glDisable(GL_BLEND);
 
 		reinterleavedSSAOShader.useProgram();
 		glBindFramebuffer(GL_FRAMEBUFFER, SSAOFramebufferID);
